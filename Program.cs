@@ -12,6 +12,7 @@ public static class Program
     {
         // See https://aka.ms/new-console-template for more information
         Console.WriteLine("Hello, World!");
+        StartContainerGroup();
     }
 
     private static void StartContainerGroup()
