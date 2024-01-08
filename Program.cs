@@ -25,17 +25,26 @@ public static class Program
 
         Console.WriteLine($"\nParallel creation of container groups starting...");
         var stopWatch = Stopwatch.StartNew();
-        List<Task> tasks = new List<Task>();
+        List<Task> creationTasks = new List<Task>();
         for (var i = 0; i < 10; i++)
         {
-            var task = new Task(() => CreateContainerGroup(armClient, targetSubscriptionId, targetResourceGroupName, $"{containerGroupName}-{i}"));
-            tasks.Add(task);
+            var creationTask = Task.Run(() => CreateContainerGroup(armClient, targetSubscriptionId, targetResourceGroupName, $"{containerGroupName}-{i}"));
+            creationTasks.Add(creationTask);
         }
-        Task.WhenAll(tasks);
+        Task task = Task.WhenAll(creationTasks);
+        task.Wait();
         stopWatch.Stop();
-        Console.WriteLine($"\nParallel creation of container groups complete! [{stopWatch.Elapsed.TotalMilliseconds}ms]");
 
-        DeleteAllContainerGroups(armClient, targetSubscriptionId, targetResourceGroupName);
+        if (task.Status == TaskStatus.RanToCompletion)
+        {
+            Console.WriteLine($"\nParallel creation of container groups succeeded! [{stopWatch.Elapsed.TotalMilliseconds}ms]");
+            DeleteAllContainerGroups(armClient, targetSubscriptionId, targetResourceGroupName);
+        }
+        else
+        {
+            Console.WriteLine($"\nParallel creation of container groups failed [{stopWatch.Elapsed.TotalMilliseconds}ms] {task.Exception}");
+        }
+        Console.WriteLine("\nDone!");
     }
 
     private static string CreateContainerGroup(ArmClient armClient, string targetSubscriptionId, string targetResourceGroupName, string containerGroupName)
