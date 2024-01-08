@@ -20,10 +20,6 @@ public static class Program
         var credentials = new ManagedIdentityCredential();
         var armClient = new ArmClient(credentials);
 
-        CreateContainerGroup(armClient, targetSubscriptionId, targetResourceGroupName, containerGroupName);
-        Sleep(3);
-        DeleteContainerGroup(armClient, targetSubscriptionId, targetResourceGroupName, containerGroupName);
-
         Console.WriteLine($"\nParallel creation of container groups starting...");
         var stopWatch = Stopwatch.StartNew();
         List<Task> creationTasks = new List<Task>();
