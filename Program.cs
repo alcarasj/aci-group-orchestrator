@@ -22,7 +22,7 @@ public static class Program
 
         for (var i = 0; i < 10; i++)
         {
-            StartContainerGroup(targetSubscriptionId, targetResourceGroupName, $"{containerGroupName}-i");
+            StartContainerGroup(targetSubscriptionId, targetResourceGroupName, $"{containerGroupName}-{i}");
         }
         Sleep(3);
         DeleteAllContainerGroups(targetSubscriptionId, targetResourceGroupName);
