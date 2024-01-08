@@ -7,10 +7,11 @@ using Azure;
 using Azure.Identity;
 using System.Diagnostics;
 using Azure.ResourceManager.Models;
+using System.Threading.Tasks;
 
 public static class Program
 {
-    private static void Main()
+    private static async Task Main()
     {
         var targetSubscriptionId = GetEnvVar("AZURE_SUBSCRIPTION_ID");
         var targetResourceGroupName = GetEnvVar("TARGET_RESOURCE_GROUP_NAME");
@@ -28,27 +29,18 @@ public static class Program
         List<Task> creationTasks = new List<Task>();
         for (var i = 0; i < 10; i++)
         {
-            var creationTask = new Task(() => CreateContainerGroup(armClient, targetSubscriptionId, targetResourceGroupName, $"{containerGroupName}-{i}"));
-            creationTask.Start();
+            var creationTask = CreateContainerGroup(armClient, targetSubscriptionId, targetResourceGroupName, $"{containerGroupName}-{i}");
             creationTasks.Add(creationTask);
         }
-        Task task = Task.WhenAll(creationTasks);
-        task.Wait();
+        await Task.WhenAll(creationTasks);
         stopWatch.Stop();
 
-        if (task.Status == TaskStatus.RanToCompletion)
-        {
-            Console.WriteLine($"\nParallel creation of container groups succeeded! [{stopWatch.Elapsed.TotalMilliseconds}ms]");
-            DeleteAllContainerGroups(armClient, targetSubscriptionId, targetResourceGroupName);
-        }
-        else
-        {
-            Console.WriteLine($"\nParallel creation of container groups failed [{stopWatch.Elapsed.TotalMilliseconds}ms] {task.Exception}");
-        }
+        Console.WriteLine($"\nParallel creation of container groups succeeded! [{stopWatch.Elapsed.TotalMilliseconds}ms]");
+        DeleteAllContainerGroups(armClient, targetSubscriptionId, targetResourceGroupName);
         Console.WriteLine("\nDone!");
     }
 
-    private static string CreateContainerGroup(ArmClient armClient, string targetSubscriptionId, string targetResourceGroupName, string containerGroupName)
+    private static async Task<string> CreateContainerGroup(ArmClient armClient, string targetSubscriptionId, string targetResourceGroupName, string containerGroupName)
     {
         Console.WriteLine($"\nCreating container group {containerGroupName}...");
         var stopWatch = Stopwatch.StartNew();
@@ -74,7 +66,7 @@ public static class Program
             Sku = ContainerGroupSku.Confidential,
             ConfidentialComputeCcePolicy = "eyJhbGxvd19hbGwiOiB0cnVlLCAiY29udGFpbmVycyI6IHsibGVuZ3RoIjogMCwgImVsZW1lbnRzIjogbnVsbH19",
         };
-        ArmOperation<ContainerGroupResource> lro = collection.CreateOrUpdate(WaitUntil.Completed, containerGroupName, data);
+        ArmOperation<ContainerGroupResource> lro = await collection.CreateOrUpdateAsync(WaitUntil.Completed, containerGroupName, data);
         ContainerGroupResource result = lro.Value;
         ContainerGroupData resourceData = result.Data;
         stopWatch.Stop();
