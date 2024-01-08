@@ -16,24 +16,25 @@ public static class Program
         var targetResourceGroupName = GetEnvVar("TARGET_RESOURCE_GROUP_NAME");
         var containerGroupName = GetEnvVar("CONTAINER_GROUP_NAME");
 
-        StartContainerGroup(targetSubscriptionId, targetResourceGroupName, containerGroupName);
+        var credentials = new ManagedIdentityCredential();
+        var armClient = new ArmClient(credentials);
+
+        StartContainerGroup(armClient, targetSubscriptionId, targetResourceGroupName, containerGroupName);
         Sleep(3);
-        DeleteContainerGroup(targetSubscriptionId, targetResourceGroupName, containerGroupName);
+        DeleteContainerGroup(armClient, targetSubscriptionId, targetResourceGroupName, containerGroupName);
 
         for (var i = 0; i < 10; i++)
         {
-            StartContainerGroup(targetSubscriptionId, targetResourceGroupName, $"{containerGroupName}-{i}");
+            StartContainerGroup(armClient, targetSubscriptionId, targetResourceGroupName, $"{containerGroupName}-{i}");
         }
         Sleep(3);
-        DeleteAllContainerGroups(targetSubscriptionId, targetResourceGroupName);
+        DeleteAllContainerGroups(armClient, targetSubscriptionId, targetResourceGroupName);
     }
 
-    private static string StartContainerGroup(string targetSubscriptionId, string targetResourceGroupName, string containerGroupName)
+    private static string StartContainerGroup(ArmClient armClient, string targetSubscriptionId, string targetResourceGroupName, string containerGroupName)
     {
         Console.WriteLine($"\nCreating container group {containerGroupName}...");
         var stopWatch = Stopwatch.StartNew();
-        var credentials = new ManagedIdentityCredential();
-        var armClient = new ArmClient(credentials);
         SubscriptionCollection subscriptions = armClient.GetSubscriptions();
         SubscriptionResource subscription = subscriptions.Get(targetSubscriptionId);
         ResourceGroupCollection resourceGroups = subscription.GetResourceGroups();
@@ -64,12 +65,10 @@ public static class Program
         return resourceData.Id;
     }
 
-    private static void DeleteContainerGroup(string targetSubscriptionId, string targetResourceGroupName, string containerGroupName)
+    private static void DeleteContainerGroup(ArmClient armClient, string targetSubscriptionId, string targetResourceGroupName, string containerGroupName)
     {
         Console.WriteLine($"\nDeleting container group {containerGroupName}");
         var stopWatch = Stopwatch.StartNew();
-        var credentials = new ManagedIdentityCredential();
-        var armClient = new ArmClient(credentials);
         ResourceIdentifier containerGroupResourceId = ContainerGroupResource.CreateResourceIdentifier(targetSubscriptionId, targetResourceGroupName, containerGroupName);
         ContainerGroupResource containerGroup = armClient.GetContainerGroupResource(containerGroupResourceId);
         ArmOperation<ContainerGroupResource> operation = containerGroup.Delete(WaitUntil.Completed);
@@ -79,12 +78,10 @@ public static class Program
         Console.WriteLine($"\nSuccessfully deleted container group {containerGroupName} (ID {resourceData.Id}) [{stopWatch.Elapsed.TotalMilliseconds}ms]");
     }
 
-    private static void DeleteAllContainerGroups(string targetSubscriptionId, string targetResourceGroupName)
+    private static void DeleteAllContainerGroups(ArmClient armClient, string targetSubscriptionId, string targetResourceGroupName)
     {
         Console.WriteLine($"\nDeleting all container groups in resource group {targetResourceGroupName} for subscription {targetSubscriptionId}...\n");
         var stopWatch = Stopwatch.StartNew();
-        var credentials = new ManagedIdentityCredential();
-        var armClient = new ArmClient(credentials);
         SubscriptionCollection subscriptions = armClient.GetSubscriptions();
         SubscriptionResource subscription = subscriptions.Get(targetSubscriptionId);
         ResourceGroupCollection resourceGroups = subscription.GetResourceGroups();
