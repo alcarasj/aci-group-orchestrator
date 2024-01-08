@@ -13,8 +13,8 @@ public static class Program
     private static void Main()
     {
         var targetSubscriptionId = GetEnvVar("AZURE_SUBSCRIPTION_ID");
-        var targetResourceGroupName = Environment.GetEnvironmentVariable("TARGET_RESOURCE_GROUP_NAME");
-        var containerGroupName = Environment.GetEnvironmentVariable("CONTAINER_GROUP_NAME");
+        var targetResourceGroupName = GetEnvVar("TARGET_RESOURCE_GROUP_NAME");
+        var containerGroupName = GetEnvVar("CONTAINER_GROUP_NAME");
 
         StartContainerGroup(targetSubscriptionId, targetResourceGroupName, containerGroupName);
         Sleep(3);
