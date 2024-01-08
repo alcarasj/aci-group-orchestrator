@@ -29,6 +29,7 @@ public static class Program
         for (var i = 0; i < 10; i++)
         {
             var creationTask = new Task(() => CreateContainerGroup(armClient, targetSubscriptionId, targetResourceGroupName, $"{containerGroupName}-{i}"));
+            creationTask.Start();
             creationTasks.Add(creationTask);
         }
         Task task = Task.WhenAll(creationTasks);
