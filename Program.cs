@@ -19,19 +19,26 @@ public static class Program
         var credentials = new ManagedIdentityCredential();
         var armClient = new ArmClient(credentials);
 
-        StartContainerGroup(armClient, targetSubscriptionId, targetResourceGroupName, containerGroupName);
+        CreateContainerGroup(armClient, targetSubscriptionId, targetResourceGroupName, containerGroupName);
         Sleep(3);
         DeleteContainerGroup(armClient, targetSubscriptionId, targetResourceGroupName, containerGroupName);
 
+        Console.WriteLine($"\nParallel creation of container groups starting...");
+        var stopWatch = Stopwatch.StartNew();
+        List<Task> tasks = new List<Task>();
         for (var i = 0; i < 10; i++)
         {
-            StartContainerGroup(armClient, targetSubscriptionId, targetResourceGroupName, $"{containerGroupName}-{i}");
+            var task = new Task(() => CreateContainerGroup(armClient, targetSubscriptionId, targetResourceGroupName, $"{containerGroupName}-{i}"));
+            tasks.Add(task);
         }
-        Sleep(3);
+        Task.WhenAll(tasks);
+        stopWatch.Stop();
+        Console.WriteLine($"\nParallel creation of container groups complete! [{stopWatch.Elapsed.TotalMilliseconds}ms]");
+
         DeleteAllContainerGroups(armClient, targetSubscriptionId, targetResourceGroupName);
     }
 
-    private static string StartContainerGroup(ArmClient armClient, string targetSubscriptionId, string targetResourceGroupName, string containerGroupName)
+    private static string CreateContainerGroup(ArmClient armClient, string targetSubscriptionId, string targetResourceGroupName, string containerGroupName)
     {
         Console.WriteLine($"\nCreating container group {containerGroupName}...");
         var stopWatch = Stopwatch.StartNew();
