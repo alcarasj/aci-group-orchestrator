@@ -11,12 +11,13 @@ using System.Threading.Tasks;
 
 public static class Program
 {
+    private const int N = 10;
+
     private static async Task Main()
     {
         var targetSubscriptionId = GetEnvVar("AZURE_SUBSCRIPTION_ID");
         var targetResourceGroupName = GetEnvVar("TARGET_RESOURCE_GROUP_NAME");
         var containerGroupName = GetEnvVar("CONTAINER_GROUP_NAME");
-        var containerGroupsToCreate = 10;
 
         var credentials = new ManagedIdentityCredential();
         var armClient = new ArmClient(credentials);
@@ -24,10 +25,10 @@ public static class Program
         Console.WriteLine($"\nEnsuring that there are no existing container groups in the resource group...");
         await DeleteAllContainerGroups(armClient, targetSubscriptionId, targetResourceGroupName);
 
-        Console.WriteLine($"\nParallel creation of container groups starting...");
+        Console.WriteLine($"\nParallel creation of {N} container groups starting...");
         var stopWatch = Stopwatch.StartNew();
         List<Task> creationTasks = new List<Task>();
-        for (var i = 0; i < containerGroupsToCreate; i++)
+        for (var i = 0; i < N; i++)
         {
             var creationTask = CreateContainerGroup(armClient, targetSubscriptionId, targetResourceGroupName, $"{containerGroupName}-{i}");
             creationTasks.Add(creationTask);
@@ -35,10 +36,10 @@ public static class Program
         await Task.WhenAll(creationTasks);
         stopWatch.Stop();
 
-        Console.WriteLine($"\nParallel creation of container groups succeeded! [{stopWatch.Elapsed.TotalMilliseconds}ms]");
+        Console.WriteLine($"\nParallel creation of {N} container groups succeeded! [{stopWatch.Elapsed.TotalMilliseconds}ms]");
 
         // Wait for the registration of the newly-created resources to propagate through all ARM regions.
-        Sleep(5);
+        Sleep(10);
 
         await DeleteAllContainerGroups(armClient, targetSubscriptionId, targetResourceGroupName);
         Console.WriteLine("\nDone!");
@@ -112,8 +113,14 @@ public static class Program
         ResourceGroupResource resourceGroup = resourceGroups.Get(targetResourceGroupName);
         ContainerGroupCollection collection = resourceGroup.GetContainerGroups();
 
+        var numberOfContainerGroupsRetrieved = collection.Count();
+        if (numberOfContainerGroupsRetrieved != N)
+        {
+            Console.WriteLine($"\nWarning: {N} container groups were expected but ARM only returned {numberOfContainerGroupsRetrieved}");
+        }
+
         List<Task> deletionTasks = new List<Task>();
-        for (var i = 0; i < collection.Count(); i++)
+        for (var i = 0; i < numberOfContainerGroupsRetrieved; i++)
         {
             ContainerGroupResource containerGroup = collection.ElementAt(i);
             var deletionTask = DeleteContainerGroup(containerGroup);
