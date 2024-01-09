@@ -21,6 +21,9 @@ public static class Program
         var credentials = new ManagedIdentityCredential();
         var armClient = new ArmClient(credentials);
 
+        Console.WriteLine($"\nEnsuring that there are no existing container groups in the resource group...");
+        await DeleteAllContainerGroups(armClient, targetSubscriptionId, targetResourceGroupName);
+
         Console.WriteLine($"\nParallel creation of container groups starting...");
         var stopWatch = Stopwatch.StartNew();
         List<Task> creationTasks = new List<Task>();
