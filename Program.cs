@@ -16,6 +16,7 @@ public static class Program
         var targetSubscriptionId = GetEnvVar("AZURE_SUBSCRIPTION_ID");
         var targetResourceGroupName = GetEnvVar("TARGET_RESOURCE_GROUP_NAME");
         var containerGroupName = GetEnvVar("CONTAINER_GROUP_NAME");
+        var containerGroupsToCreate = 10;
 
         var credentials = new ManagedIdentityCredential();
         var armClient = new ArmClient(credentials);
@@ -23,7 +24,7 @@ public static class Program
         Console.WriteLine($"\nParallel creation of container groups starting...");
         var stopWatch = Stopwatch.StartNew();
         List<Task> creationTasks = new List<Task>();
-        for (var i = 0; i < 10; i++)
+        for (var i = 0; i < containerGroupsToCreate; i++)
         {
             var creationTask = CreateContainerGroup(armClient, targetSubscriptionId, targetResourceGroupName, $"{containerGroupName}-{i}");
             creationTasks.Add(creationTask);
@@ -32,7 +33,11 @@ public static class Program
         stopWatch.Stop();
 
         Console.WriteLine($"\nParallel creation of container groups succeeded! [{stopWatch.Elapsed.TotalMilliseconds}ms]");
-        DeleteAllContainerGroups(armClient, targetSubscriptionId, targetResourceGroupName);
+
+        // Wait for the registration of the newly-created resources to propagate through all ARM regions.
+        Sleep(5);
+
+        await DeleteAllContainerGroups(armClient, targetSubscriptionId, targetResourceGroupName);
         Console.WriteLine("\nDone!");
     }
 
@@ -83,7 +88,18 @@ public static class Program
         Console.WriteLine($"\nSuccessfully deleted container group {containerGroupName} (ID {resourceData.Id}) [{stopWatch.Elapsed.TotalMilliseconds}ms]");
     }
 
-    private static void DeleteAllContainerGroups(ArmClient armClient, string targetSubscriptionId, string targetResourceGroupName)
+    private static async Task DeleteContainerGroup(ContainerGroupResource containerGroup)
+    {
+        Console.WriteLine($"\nDeleting container group {containerGroup.Data.Name}");
+        var stopWatch = Stopwatch.StartNew();
+        ArmOperation<ContainerGroupResource> operation = containerGroup.Delete(WaitUntil.Completed);
+        ContainerGroupResource result = operation.Value;
+        ContainerGroupData resourceData = result.Data;
+        stopWatch.Stop();
+        Console.WriteLine($"\nSuccessfully deleted container group {containerGroup.Data.Name} (ID {resourceData.Id}) [{stopWatch.Elapsed.TotalMilliseconds}ms]");
+    }
+
+    private static async Task DeleteAllContainerGroups(ArmClient armClient, string targetSubscriptionId, string targetResourceGroupName)
     {
         Console.WriteLine($"\nDeleting all container groups in resource group {targetResourceGroupName} for subscription {targetSubscriptionId}...\n");
         var stopWatch = Stopwatch.StartNew();
@@ -93,15 +109,14 @@ public static class Program
         ResourceGroupResource resourceGroup = resourceGroups.Get(targetResourceGroupName);
         ContainerGroupCollection collection = resourceGroup.GetContainerGroups();
 
+        List<Task> deletionTasks = new List<Task>();
         for (var i = 0; i < collection.Count(); i++)
         {
             ContainerGroupResource containerGroup = collection.ElementAt(i);
-            ArmOperation<ContainerGroupResource> operation = containerGroup.Delete(WaitUntil.Completed);
-            ContainerGroupResource result = operation.Value;
-            ContainerGroupData resourceData = result.Data;
-            Console.WriteLine($"Successfully deleted container group {containerGroup.Data.Name}");
+            var deletionTask = DeleteContainerGroup(containerGroup);
+            deletionTasks.Add(deletionTask);
         }
-
+        await Task.WhenAll(deletionTasks);
         stopWatch.Stop();
         Console.WriteLine($"\nSuccessfully deleted all container groups [{stopWatch.Elapsed.TotalMilliseconds}ms]");
     }
@@ -120,7 +135,7 @@ public static class Program
     private static void Sleep(int seconds)
     {
         var milliseconds = seconds * 1000;
-        Console.WriteLine($"\nSleeping for {milliseconds}ms");
+        Console.WriteLine($"\nSleeping for {seconds} seconds");
         Thread.Sleep(milliseconds);
     }
 }
