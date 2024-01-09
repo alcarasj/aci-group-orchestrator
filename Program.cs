@@ -92,7 +92,7 @@ public static class Program
     {
         Console.WriteLine($"\nDeleting container group {containerGroup.Data.Name}");
         var stopWatch = Stopwatch.StartNew();
-        ArmOperation<ContainerGroupResource> operation = containerGroup.Delete(WaitUntil.Completed);
+        ArmOperation<ContainerGroupResource> operation = await containerGroup.DeleteAsync(WaitUntil.Completed);
         ContainerGroupResource result = operation.Value;
         ContainerGroupData resourceData = result.Data;
         stopWatch.Stop();
