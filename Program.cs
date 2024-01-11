@@ -104,14 +104,8 @@ public static class Program
         var stopWatch = Stopwatch.StartNew();
         var containerGroups = GetContainerGroups(armClient, targetSubscriptionId, targetResourceGroupName);
 
-        var numberOfContainerGroupsRetrieved = containerGroups.Count();
-        if (numberOfContainerGroupsRetrieved != N)
-        {
-            Console.WriteLine($"\nWarning: {N} container groups were expected but ARM only returned {numberOfContainerGroupsRetrieved}");
-        }
-
         List<Task> deletionTasks = new List<Task>();
-        for (var i = 0; i < numberOfContainerGroupsRetrieved; i++)
+        for (var i = 0; i < containerGroups.Count(); i++)
         {
             ContainerGroupResource containerGroup = containerGroups.ElementAt(i);
             var deletionTask = DeleteContainerGroup(containerGroup);
