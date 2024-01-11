@@ -103,15 +103,22 @@ public static class Program
         Console.WriteLine($"\nDeleting all container groups in resource group {targetResourceGroupName} for subscription {targetSubscriptionId}...\n");
         var stopWatch = Stopwatch.StartNew();
         var containerGroups = GetContainerGroups(armClient, targetSubscriptionId, targetResourceGroupName);
-
         List<Task> deletionTasks = new List<Task>();
         for (var i = 0; i < containerGroups.Count(); i++)
         {
-            ContainerGroupResource containerGroup = containerGroups.ElementAt(i);
-            var deletionTask = DeleteContainerGroup(containerGroup);
-            deletionTasks.Add(deletionTask);
+            try
+            {
+                ContainerGroupResource containerGroup = containerGroups.ElementAt(i);
+                var deletionTask = DeleteContainerGroup(containerGroup);
+                deletionTasks.Add(deletionTask);
+            }
+            catch (Exception ex)
+            {
+                throw new Exception($"Index: {i}", ex);
+            }
         }
         await Task.WhenAll(deletionTasks);
+
         stopWatch.Stop();
         Console.WriteLine($"\nSuccessfully deleted all container groups [{stopWatch.Elapsed.TotalMilliseconds}ms]");
     }
@@ -129,11 +136,15 @@ public static class Program
 
     private static ContainerGroupCollection GetContainerGroups(ArmClient armClient, string targetSubscriptionId, string targetResourceGroupName)
     {
+        Console.WriteLine($"\nRetrieving all container groups in resource group {targetResourceGroupName} for subscription {targetSubscriptionId}...\n");
+        var stopWatch = Stopwatch.StartNew();
         SubscriptionCollection subscriptions = armClient.GetSubscriptions();
         SubscriptionResource subscription = subscriptions.Get(targetSubscriptionId);
         ResourceGroupCollection resourceGroups = subscription.GetResourceGroups();
         ResourceGroupResource resourceGroup = resourceGroups.Get(targetResourceGroupName);
         ContainerGroupCollection collection = resourceGroup.GetContainerGroups();
+        stopWatch.Stop();
+        Console.WriteLine($"\nSuccessfully retrieved {collection.Count()} container groups [{stopWatch.Elapsed.TotalMilliseconds}ms]");
         return collection;
     }
 
