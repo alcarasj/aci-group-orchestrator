@@ -24,6 +24,9 @@ public static class Program
         Console.WriteLine($"\nEnsuring that there are no existing container groups in the resource group...");
         await DeleteAllContainerGroups(armClient, targetSubscriptionId, targetResourceGroupName);
 
+        // Wait for the deletion of the resources to propagate through all ARM regions.
+        SleepUntil(() => GetContainerGroups(armClient, targetSubscriptionId, targetResourceGroupName).Count() == 0);
+
         Console.WriteLine($"\nParallel creation of {N} container groups starting...");
         var stopWatch = Stopwatch.StartNew();
         List<Task> creationTasks = new List<Task>();
@@ -38,7 +41,7 @@ public static class Program
         Console.WriteLine($"\nParallel creation of {N} container groups succeeded! [{stopWatch.Elapsed.TotalMilliseconds}ms]");
 
         // Wait for the registration of the newly-created resources to propagate through all ARM regions.
-        SleepUntil(() => N == GetContainerGroups(armClient, targetSubscriptionId, targetResourceGroupName).Count());
+        SleepUntil(() => GetContainerGroups(armClient, targetSubscriptionId, targetResourceGroupName).Count() == N);
 
         await DeleteAllContainerGroups(armClient, targetSubscriptionId, targetResourceGroupName);
         Console.WriteLine("\nDone!");
