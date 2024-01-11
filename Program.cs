@@ -6,12 +6,11 @@ using Azure.ResourceManager;
 using Azure;
 using Azure.Identity;
 using System.Diagnostics;
-using Azure.ResourceManager.Models;
-using System.Threading.Tasks;
 
 public static class Program
 {
     private const int N = 10;
+    private const int MaxTimesToSleep = 10;
 
     private static async Task Main()
     {
@@ -39,7 +38,7 @@ public static class Program
         Console.WriteLine($"\nParallel creation of {N} container groups succeeded! [{stopWatch.Elapsed.TotalMilliseconds}ms]");
 
         // Wait for the registration of the newly-created resources to propagate through all ARM regions.
-        Sleep(10);
+        SleepUntil(() => N == GetContainerGroups(armClient, targetSubscriptionId, targetResourceGroupName).Count());
 
         await DeleteAllContainerGroups(armClient, targetSubscriptionId, targetResourceGroupName);
         Console.WriteLine("\nDone!");
@@ -49,11 +48,7 @@ public static class Program
     {
         Console.WriteLine($"\nCreating container group {containerGroupName}...");
         var stopWatch = Stopwatch.StartNew();
-        SubscriptionCollection subscriptions = armClient.GetSubscriptions();
-        SubscriptionResource subscription = subscriptions.Get(targetSubscriptionId);
-        ResourceGroupCollection resourceGroups = subscription.GetResourceGroups();
-        ResourceGroupResource resourceGroup = resourceGroups.Get(targetResourceGroupName);
-        ContainerGroupCollection collection = resourceGroup.GetContainerGroups();
+        var containerGroups = GetContainerGroups(armClient, targetSubscriptionId, targetResourceGroupName);
         ContainerGroupData data = new ContainerGroupData(new AzureLocation("westeurope"), new ContainerInstanceContainer[]
             {
                     new ContainerInstanceContainer("accdemo", "mcr.microsoft.com/azuredocs/aci-helloworld", new ContainerResourceRequirements(new ContainerResourceRequestsContent(1.5, 1)))
@@ -71,7 +66,7 @@ public static class Program
             Sku = ContainerGroupSku.Confidential,
             ConfidentialComputeCcePolicy = "eyJhbGxvd19hbGwiOiB0cnVlLCAiY29udGFpbmVycyI6IHsibGVuZ3RoIjogMCwgImVsZW1lbnRzIjogbnVsbH19",
         };
-        ArmOperation<ContainerGroupResource> lro = await collection.CreateOrUpdateAsync(WaitUntil.Completed, containerGroupName, data);
+        ArmOperation<ContainerGroupResource> lro = await containerGroups.CreateOrUpdateAsync(WaitUntil.Completed, containerGroupName, data);
         ContainerGroupResource result = lro.Value;
         ContainerGroupData resourceData = result.Data;
         stopWatch.Stop();
@@ -107,13 +102,9 @@ public static class Program
     {
         Console.WriteLine($"\nDeleting all container groups in resource group {targetResourceGroupName} for subscription {targetSubscriptionId}...\n");
         var stopWatch = Stopwatch.StartNew();
-        SubscriptionCollection subscriptions = armClient.GetSubscriptions();
-        SubscriptionResource subscription = subscriptions.Get(targetSubscriptionId);
-        ResourceGroupCollection resourceGroups = subscription.GetResourceGroups();
-        ResourceGroupResource resourceGroup = resourceGroups.Get(targetResourceGroupName);
-        ContainerGroupCollection collection = resourceGroup.GetContainerGroups();
+        var containerGroups = GetContainerGroups(armClient, targetSubscriptionId, targetResourceGroupName);
 
-        var numberOfContainerGroupsRetrieved = collection.Count();
+        var numberOfContainerGroupsRetrieved = containerGroups.Count();
         if (numberOfContainerGroupsRetrieved != N)
         {
             Console.WriteLine($"\nWarning: {N} container groups were expected but ARM only returned {numberOfContainerGroupsRetrieved}");
@@ -122,7 +113,7 @@ public static class Program
         List<Task> deletionTasks = new List<Task>();
         for (var i = 0; i < numberOfContainerGroupsRetrieved; i++)
         {
-            ContainerGroupResource containerGroup = collection.ElementAt(i);
+            ContainerGroupResource containerGroup = containerGroups.ElementAt(i);
             var deletionTask = DeleteContainerGroup(containerGroup);
             deletionTasks.Add(deletionTask);
         }
@@ -142,10 +133,37 @@ public static class Program
         return value;
     }
 
+    private static ContainerGroupCollection GetContainerGroups(ArmClient armClient, string targetSubscriptionId, string targetResourceGroupName)
+    {
+        SubscriptionCollection subscriptions = armClient.GetSubscriptions();
+        SubscriptionResource subscription = subscriptions.Get(targetSubscriptionId);
+        ResourceGroupCollection resourceGroups = subscription.GetResourceGroups();
+        ResourceGroupResource resourceGroup = resourceGroups.Get(targetResourceGroupName);
+        ContainerGroupCollection collection = resourceGroup.GetContainerGroups();
+        return collection;
+    }
+
     private static void Sleep(int seconds)
     {
         var milliseconds = seconds * 1000;
         Console.WriteLine($"\nSleeping for {seconds} seconds");
         Thread.Sleep(milliseconds);
+    }
+
+    private static void SleepUntil(Func<bool> predicate)
+    {
+        var timesSlept = 0;
+        var isPredicateTrue = predicate();
+        while (!isPredicateTrue && timesSlept < MaxTimesToSleep)
+        {
+            Sleep(5);
+            isPredicateTrue = predicate();
+            timesSlept++;
+        }
+
+        if (!isPredicateTrue && MaxTimesToSleep >= 5)
+        {
+            throw new Exception($"Expected predicate to be true after {MaxTimesToSleep} evaluations but was still false.");
+        }
     }
 }
