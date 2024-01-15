@@ -6,6 +6,7 @@ using Azure.ResourceManager;
 using Azure;
 using Azure.Identity;
 using System.Diagnostics;
+using System.Linq.Expressions;
 
 public static class Program
 {
@@ -158,9 +159,10 @@ public static class Program
         Thread.Sleep(milliseconds);
     }
 
-    private static void SleepUntil(Func<bool> predicate)
+    private static void SleepUntil(Expression<Func<bool>> expression)
     {
         var timesSlept = 0;
+        var predicate = expression.Compile();
         var isPredicateTrue = predicate();
         while (!isPredicateTrue && timesSlept < MaxTimesToSleep)
         {
@@ -169,9 +171,9 @@ public static class Program
             timesSlept++;
         }
 
-        if (!isPredicateTrue && MaxTimesToSleep >= 5)
+        if (!isPredicateTrue && timesSlept >= MaxTimesToSleep)
         {
-            throw new Exception($"Expected predicate to be true after {MaxTimesToSleep} evaluations but was still false.");
+            throw new Exception($"Expected predicate {(LambdaExpression) expression.Body} to be true after {MaxTimesToSleep} evaluations but was still false.");
         }
     }
 }
