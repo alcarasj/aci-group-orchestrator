@@ -18,6 +18,7 @@ public static class Program
         var targetSubscriptionId = GetEnvVar("AZURE_SUBSCRIPTION_ID");
         var targetResourceGroupName = GetEnvVar("TARGET_RESOURCE_GROUP_NAME");
         var containerGroupName = GetEnvVar("CONTAINER_GROUP_NAME");
+        var targetSubnetResourceId = GetEnvVar("TARGET_SUBNET_RESOURCE_ID");
 
         var credentials = new ManagedIdentityCredential();
         var armClient = new ArmClient(credentials);
@@ -33,7 +34,7 @@ public static class Program
         List<Task> creationTasks = new List<Task>();
         for (var i = 0; i < N; i++)
         {
-            var creationTask = CreateContainerGroup(armClient, targetSubscriptionId, targetResourceGroupName, $"{containerGroupName}-{i}");
+            var creationTask = CreateContainerGroup(armClient, targetSubscriptionId, targetResourceGroupName, $"{containerGroupName}-{i}", targetSubnetResourceId);
             creationTasks.Add(creationTask);
         }
         await Task.WhenAll(creationTasks);
@@ -75,6 +76,38 @@ public static class Program
         ContainerGroupData resourceData = result.Data;
         stopWatch.Stop();
         Console.WriteLine($"\nSuccessfully created container group {containerGroupName} (ID {resourceData.Id}) [{stopWatch.Elapsed.TotalMilliseconds}ms]");
+        return resourceData.Id;
+    }
+
+    private static async Task<string> CreateContainerGroup(ArmClient armClient, string targetSubscriptionId, string targetResourceGroupName, string containerGroupName, string targetSubnetResourceId)
+    {
+        Console.WriteLine($"\nCreating container group {containerGroupName} on subnet {targetSubnetResourceId}...");
+        var stopWatch = Stopwatch.StartNew();
+        var containerGroups = GetContainerGroups(armClient, targetSubscriptionId, targetResourceGroupName);
+        var subnetId = new ContainerGroupSubnetId(new ResourceIdentifier(targetSubnetResourceId));
+        ContainerGroupData data = new ContainerGroupData(new AzureLocation("westeurope"), new ContainerInstanceContainer[]
+            {
+                    new ContainerInstanceContainer("accdemo", "mcr.microsoft.com/azuredocs/aci-helloworld", new ContainerResourceRequirements(new ContainerResourceRequestsContent(1.5, 1)))
+                    {
+                        Command={},
+                        Ports ={new ContainerPort(8000)},
+                        EnvironmentVariables = {},
+                        SecurityContext = new ContainerSecurityContextDefinition(){IsPrivileged = false}
+                    }
+                },
+                ContainerInstanceOperatingSystemType.Linux)
+        {
+            ImageRegistryCredentials = { },
+            IPAddress = new ContainerGroupIPAddress(new ContainerGroupPort[] { new ContainerGroupPort(8000) { Protocol = ContainerGroupNetworkProtocol.Tcp } }, ContainerGroupIPAddressType.Public),
+            Sku = ContainerGroupSku.Confidential,
+            ConfidentialComputeCcePolicy = "eyJhbGxvd19hbGwiOiB0cnVlLCAiY29udGFpbmVycyI6IHsibGVuZ3RoIjogMCwgImVsZW1lbnRzIjogbnVsbH19",
+            SubnetIds = { subnetId }
+        };
+        ArmOperation<ContainerGroupResource> lro = await containerGroups.CreateOrUpdateAsync(WaitUntil.Completed, containerGroupName, data);
+        ContainerGroupResource result = lro.Value;
+        ContainerGroupData resourceData = result.Data;
+        stopWatch.Stop();
+        Console.WriteLine($"\nSuccessfully created container group {containerGroupName} on subnet {targetSubnetResourceId} (ID {resourceData.Id}) [{stopWatch.Elapsed.TotalMilliseconds}ms]");
         return resourceData.Id;
     }
 
