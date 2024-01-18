@@ -18,7 +18,7 @@ public static class Program
         var targetSubscriptionId = GetEnvVar("AZURE_SUBSCRIPTION_ID");
         var targetResourceGroupName = GetEnvVar("TARGET_RESOURCE_GROUP_NAME");
         var containerGroupName = GetEnvVar("CONTAINER_GROUP_NAME");
-        var targetSubnetResourceId = GetEnvVar("TARGET_SUBNET_RESOURCE_ID");
+        var targetSubnetResourceId = GetEnvVar("TARGET_SUBNET_RESOURCE_ID", true);
 
         var credentials = new ManagedIdentityCredential();
         var armClient = new ArmClient(credentials);
@@ -34,7 +34,9 @@ public static class Program
         List<Task> creationTasks = new List<Task>();
         for (var i = 0; i < N; i++)
         {
-            var creationTask = CreateContainerGroup(armClient, targetSubscriptionId, targetResourceGroupName, $"{containerGroupName}-{i}", targetSubnetResourceId);
+            var creationTask = string.IsNullOrEmpty(targetSubnetResourceId) ?
+                CreateContainerGroup(armClient, targetSubscriptionId, targetResourceGroupName, $"{containerGroupName}-{i}") :
+                CreateContainerGroup(armClient, targetSubscriptionId, targetResourceGroupName, $"{containerGroupName}-{i}", targetSubnetResourceId);
             creationTasks.Add(creationTask);
         }
         await Task.WhenAll(creationTasks);
@@ -152,10 +154,10 @@ public static class Program
         Console.WriteLine($"\nSuccessfully deleted all container groups [{stopWatch.Elapsed.TotalMilliseconds}ms]");
     }
 
-    private static string GetEnvVar(string envVarName)
+    private static string GetEnvVar(string envVarName, bool isOptional = false)
     {
         var value = Environment.GetEnvironmentVariable(envVarName);
-        if (string.IsNullOrEmpty(value))
+        if (string.IsNullOrEmpty(value) && !isOptional)
         {
             throw new Exception($"{envVarName} is not set!");
         }
