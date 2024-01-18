@@ -141,11 +141,10 @@ public static class Program
         var stopWatch = Stopwatch.StartNew();
         var containerGroups = GetContainerGroups(armClient, targetSubscriptionId, targetResourceGroupName);
         List<Task> deletionTasks = new List<Task>();
-        for (var i = 0; i < containerGroups.Count(); i++)
+        foreach (var containerGroup in containerGroups)
         {
             try
             {
-                ContainerGroupResource containerGroup = containerGroups.ElementAt(i);
                 var deletionTask = DeleteContainerGroup(containerGroup);
                 deletionTasks.Add(deletionTask);
             }
