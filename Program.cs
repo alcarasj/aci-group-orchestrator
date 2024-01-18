@@ -85,7 +85,7 @@ public static class Program
         var stopWatch = Stopwatch.StartNew();
         var containerGroups = GetContainerGroups(armClient, targetSubscriptionId, targetResourceGroupName);
         var subnetId = new ContainerGroupSubnetId(new ResourceIdentifier(targetSubnetResourceId));
-        ContainerGroupData data = new ContainerGroupData(new AzureLocation("westeurope"), new ContainerInstanceContainer[]
+        ContainerGroupData data = new ContainerGroupData(new AzureLocation("eastus"), new ContainerInstanceContainer[]
             {
                     new ContainerInstanceContainer("accdemo", "mcr.microsoft.com/azuredocs/aci-helloworld", new ContainerResourceRequirements(new ContainerResourceRequestsContent(1.5, 1)))
                     {
