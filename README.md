@@ -5,7 +5,7 @@ Requires the following:
 - A subscription and resource group in Azure.
 - A VNET with at least two subnets.
 - A VM instance within the resource group that is deployed to one subnet.
-- The VM instance must have the system-assigned managed identity enabled with permissions to create, read and delete container groups, and to read resource groups within the scope of the resource group.
+- The VM instance must have the system-assigned managed identity enabled with permissions to create, read and delete container groups; to read resource groups; and to join subnets within the scope of the resource group.
 ## Instructions
 1. Clone the repo on the VM.
 2. Open a terminal.
