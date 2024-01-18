@@ -143,15 +143,8 @@ public static class Program
         List<Task> deletionTasks = new List<Task>();
         foreach (var containerGroup in containerGroups)
         {
-            try
-            {
-                var deletionTask = DeleteContainerGroup(containerGroup);
-                deletionTasks.Add(deletionTask);
-            }
-            catch (Exception ex)
-            {
-                throw new Exception($"Index: {i}", ex);
-            }
+            var deletionTask = DeleteContainerGroup(containerGroup);
+            deletionTasks.Add(deletionTask);
         }
         await Task.WhenAll(deletionTasks);
 
@@ -205,7 +198,7 @@ public static class Program
 
         if (!isPredicateTrue && timesSlept >= MaxTimesToSleep)
         {
-            throw new Exception($"Expected predicate {(LambdaExpression) expression.Body} to be true after {MaxTimesToSleep} evaluations but was still false.");
+            throw new Exception($"Expected predicate {(LambdaExpression)expression.Body} to be true after {MaxTimesToSleep} evaluations but was still false.");
         }
     }
 }
