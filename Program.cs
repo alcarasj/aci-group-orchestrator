@@ -7,6 +7,7 @@ using Azure;
 using Azure.Identity;
 using System.Diagnostics;
 using System.Linq.Expressions;
+using Azure.ResourceManager.Resources.Models;
 
 public static class Program
 {
@@ -19,6 +20,7 @@ public static class Program
         var targetResourceGroupName = GetEnvVar("TARGET_RESOURCE_GROUP_NAME");
         var containerGroupName = GetEnvVar("CONTAINER_GROUP_NAME");
         var targetSubnetResourceId = GetEnvVar("TARGET_SUBNET_RESOURCE_ID", true);
+        var templateFileName = GetEnvVar("TEMPLATE_FILE_NAME", true);
 
         var credentials = new ManagedIdentityCredential();
         var armClient = new ArmClient(credentials);
@@ -34,9 +36,20 @@ public static class Program
         List<Task> creationTasks = new List<Task>();
         for (var i = 0; i < N; i++)
         {
-            var creationTask = string.IsNullOrEmpty(targetSubnetResourceId) ?
-                CreateContainerGroup(armClient, targetSubscriptionId, targetResourceGroupName, $"{containerGroupName}-{i}") :
-                CreateContainerGroup(armClient, targetSubscriptionId, targetResourceGroupName, $"{containerGroupName}-{i}", targetSubnetResourceId);
+            var nthContainerGroupName = $"{containerGroupName}-{i}";
+            Task creationTask;
+            if (!string.IsNullOrEmpty(targetSubnetResourceId))
+            {
+                creationTask = CreateContainerGroup(armClient, targetSubscriptionId, targetResourceGroupName, nthContainerGroupName, targetSubnetResourceId);
+            }
+            else if (!string.IsNullOrEmpty(templateFileName))
+            {
+                creationTask = CreateContainerGroup(armClient, targetSubscriptionId, targetResourceGroupName, nthContainerGroupName, templateFileName, $"deployment-{nthContainerGroupName}");
+            }
+            else
+            {
+                creationTask = CreateContainerGroup(armClient, targetSubscriptionId, targetResourceGroupName, nthContainerGroupName);
+            }
             creationTasks.Add(creationTask);
         }
         await Task.WhenAll(creationTasks);
@@ -49,6 +62,31 @@ public static class Program
 
         await DeleteAllContainerGroups(armClient, targetSubscriptionId, targetResourceGroupName);
         Console.WriteLine("\nDone!");
+    }
+
+    private static async Task CreateContainerGroup(ArmClient armClient, string targetSubscriptionId, string targetResourceGroupName, string containerGroupName, string templateFileName, string deploymentName)
+    {
+        Console.WriteLine($"\nCreating container group {containerGroupName} from ARM template {templateFileName}...");
+        var stopWatch = Stopwatch.StartNew();
+
+        var templateJsonString = File.ReadAllText(Path.Combine(".", "templates", templateFileName)).TrimEnd();
+        SubscriptionCollection subscriptions = armClient.GetSubscriptions();
+        SubscriptionResource subscription = subscriptions.Get(targetSubscriptionId);
+        ResourceGroupCollection resourceGroups = subscription.GetResourceGroups();
+        ResourceGroupResource resourceGroup = resourceGroups.Get(targetResourceGroupName);
+        var deploymentCollection = resourceGroup.GetArmDeployments();
+        var deploymentContent = new ArmDeploymentContent
+        (
+            new ArmDeploymentProperties(ArmDeploymentMode.Incremental)
+            {
+                Template = BinaryData.FromObjectAsJson(templateJsonString),
+                Parameters = BinaryData.FromString("\"{}\"")
+            }
+         );
+        var rawResult = await deploymentCollection.CreateOrUpdateAsync(Azure.WaitUntil.Completed, deploymentName, deploymentContent);
+        var deploymentResult = rawResult.Value;
+        stopWatch.Stop();
+        Console.WriteLine($"\nSuccessfully created container group {containerGroupName} from ARM template {templateFileName} [{stopWatch.Elapsed.TotalMilliseconds}ms]");
     }
 
     private static async Task<string> CreateContainerGroup(ArmClient armClient, string targetSubscriptionId, string targetResourceGroupName, string containerGroupName)
