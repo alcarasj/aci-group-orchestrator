@@ -11,7 +11,7 @@
         },
         "location": {
             "type": "string",
-            "defaultValue": "North Europe",
+            "defaultValue": "East US",
             "metadata": {
                 "description": "Location for all resources."
             }
@@ -67,9 +67,9 @@
                 "1"
             ],
             "properties": {
-                "confidentialComputeProperties": {
-                    "ccePolicy": ""
-                },
+              "confidentialComputeProperties": {
+                "ccePolicy": "eyJhbGxvd19hbGwiOiB0cnVlLCAiY29udGFpbmVycyI6IHsibGVuZ3RoIjogMCwgImVsZW1lbnRzIjogbnVsbH19"
+              },
                 "containers": [
                     {
                         "name": "[parameters('name')]",

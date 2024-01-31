@@ -8,6 +8,7 @@ using Azure.Identity;
 using System.Diagnostics;
 using System.Linq.Expressions;
 using Azure.ResourceManager.Resources.Models;
+using System;
 
 public static class Program
 {
@@ -80,13 +81,16 @@ public static class Program
             new ArmDeploymentProperties(ArmDeploymentMode.Incremental)
             {
                 Template = BinaryData.FromObjectAsJson(templateJsonString),
-                Parameters = BinaryData.FromString("\"{}\"")
+                Parameters = BinaryData.FromObjectAsJson(new { name = containerGroupName })
             }
          );
         var rawResult = await deploymentCollection.CreateOrUpdateAsync(Azure.WaitUntil.Completed, deploymentName, deploymentContent);
         var deploymentResult = rawResult.Value;
+        var containerGroups = GetContainerGroups(armClient, targetSubscriptionId, targetResourceGroupName);
+        var containerGroup = containerGroups.Get(containerGroupName).Value;
+        var zones = containerGroup.Data.Zones.ToArray();
         stopWatch.Stop();
-        Console.WriteLine($"\nSuccessfully created container group {containerGroupName} from ARM template {templateFileName} [{stopWatch.Elapsed.TotalMilliseconds}ms]");
+        Console.WriteLine($"\nSuccessfully created container group {containerGroupName} from ARM template {templateFileName} (Zones: {string.Join(", ", zones)}) [{stopWatch.Elapsed.TotalMilliseconds}ms]");
     }
 
     private static async Task<string> CreateContainerGroup(ArmClient armClient, string targetSubscriptionId, string targetResourceGroupName, string containerGroupName)
