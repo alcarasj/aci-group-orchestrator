@@ -64,12 +64,14 @@
             "name": "[parameters('name')]",
             "location": "[parameters('location')]",
             "zones": [
-                "1"
+                "1",
+                "2",
+                "3"
             ],
             "properties": {
-              "confidentialComputeProperties": {
-                "ccePolicy": "eyJhbGxvd19hbGwiOiB0cnVlLCAiY29udGFpbmVycyI6IHsibGVuZ3RoIjogMCwgImVsZW1lbnRzIjogbnVsbH19"
-              },
+                "confidentialComputeProperties": {
+                    "ccePolicy": "eyJhbGxvd19hbGwiOiB0cnVlLCAiY29udGFpbmVycyI6IHsibGVuZ3RoIjogMCwgImVsZW1lbnRzIjogbnVsbH19"
+                },
                 "containers": [
                     {
                         "name": "[parameters('name')]",

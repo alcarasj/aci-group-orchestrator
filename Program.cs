@@ -72,6 +72,7 @@ public static class Program
 
         var templateJsonString = File.ReadAllText(Path.Combine(".", "templates", templateFileName)).TrimEnd();
         var templateJson = JsonDocument.Parse(templateJsonString);
+        var parametersJson = new { name = new { value = containerGroupName } };
         SubscriptionCollection subscriptions = armClient.GetSubscriptions();
         SubscriptionResource subscription = subscriptions.Get(targetSubscriptionId);
         ResourceGroupCollection resourceGroups = subscription.GetResourceGroups();
@@ -82,7 +83,7 @@ public static class Program
             new ArmDeploymentProperties(ArmDeploymentMode.Incremental)
             {
                 Template = BinaryData.FromObjectAsJson(templateJson),
-                Parameters = BinaryData.FromObjectAsJson(new { name = containerGroupName })
+                Parameters = BinaryData.FromObjectAsJson(parametersJson)
             }
          );
         var rawResult = await deploymentCollection.CreateOrUpdateAsync(Azure.WaitUntil.Completed, deploymentName, deploymentContent);
