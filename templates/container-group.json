@@ -71,7 +71,7 @@
             "name": "[parameters('name')]",
             "location": "[parameters('location')]",
             "zones": [
-                "1"
+                "[parameters('availabilityZoneNumber)]"
             ],
             "properties": {
                 "confidentialComputeProperties": {
