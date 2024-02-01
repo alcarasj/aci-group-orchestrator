@@ -55,6 +55,13 @@
             "metadata": {
                 "description": "The behavior of Azure runtime if container has stopped."
             }
+        },
+        "availabilityZoneNumber": {
+            "type": "int",
+            "defaultValue": 1,
+            "metadata": {
+                "description": "The availability zone number for fault domain spread."
+            }
         }
     },
     "resources": [
@@ -64,9 +71,7 @@
             "name": "[parameters('name')]",
             "location": "[parameters('location')]",
             "zones": [
-                "1",
-                "2",
-                "3"
+                "1"
             ],
             "properties": {
                 "confidentialComputeProperties": {

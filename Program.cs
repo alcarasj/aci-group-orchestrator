@@ -45,7 +45,8 @@ public static class Program
             }
             else if (!string.IsNullOrEmpty(templateFileName))
             {
-                creationTask = CreateContainerGroup(armClient, targetSubscriptionId, targetResourceGroupName, nthContainerGroupName, templateFileName, $"deployment-{nthContainerGroupName}");
+                var availabilityZoneNumber = (i % 3) + 1; // Assumes each AZ-supported region will have minimum 3 AZ's.
+                creationTask = CreateContainerGroup(armClient, targetSubscriptionId, targetResourceGroupName, nthContainerGroupName, templateFileName, $"deployment-{nthContainerGroupName}", availabilityZoneNumber);
             }
             else
             {
@@ -65,14 +66,17 @@ public static class Program
         Console.WriteLine("\nDone!");
     }
 
-    private static async Task CreateContainerGroup(ArmClient armClient, string targetSubscriptionId, string targetResourceGroupName, string containerGroupName, string templateFileName, string deploymentName)
+    private static async Task CreateContainerGroup(ArmClient armClient, string targetSubscriptionId, string targetResourceGroupName, string containerGroupName, string templateFileName, string deploymentName, int availabilityZoneNumber)
     {
         Console.WriteLine($"\nCreating container group {containerGroupName} from ARM template {templateFileName}...");
         var stopWatch = Stopwatch.StartNew();
-
         var templateJsonString = File.ReadAllText(Path.Combine(".", "templates", templateFileName)).TrimEnd();
         var templateJson = JsonDocument.Parse(templateJsonString);
-        var parametersJson = new { name = new { value = containerGroupName } };
+        var parametersJson = new 
+        {
+            name = new { value = containerGroupName },
+            availabilityZoneNumber = new { value = availabilityZoneNumber }
+        };
         SubscriptionCollection subscriptions = armClient.GetSubscriptions();
         SubscriptionResource subscription = subscriptions.Get(targetSubscriptionId);
         ResourceGroupCollection resourceGroups = subscription.GetResourceGroups();
@@ -86,7 +90,7 @@ public static class Program
                 Parameters = BinaryData.FromObjectAsJson(parametersJson)
             }
          );
-        var rawResult = await deploymentCollection.CreateOrUpdateAsync(Azure.WaitUntil.Completed, deploymentName, deploymentContent);
+        await deploymentCollection.CreateOrUpdateAsync(WaitUntil.Completed, deploymentName, deploymentContent);
         var containerGroups = GetContainerGroups(armClient, targetSubscriptionId, targetResourceGroupName);
         var containerGroup = containerGroups.Get(containerGroupName).Value;
         var zones = containerGroup.Data.Zones.ToArray();
