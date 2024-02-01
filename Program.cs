@@ -8,7 +8,7 @@ using Azure.Identity;
 using System.Diagnostics;
 using System.Linq.Expressions;
 using Azure.ResourceManager.Resources.Models;
-using System;
+using System.Text.Json;
 
 public static class Program
 {
@@ -71,6 +71,7 @@ public static class Program
         var stopWatch = Stopwatch.StartNew();
 
         var templateJsonString = File.ReadAllText(Path.Combine(".", "templates", templateFileName)).TrimEnd();
+        var templateJson = JsonDocument.Parse(templateJsonString);
         SubscriptionCollection subscriptions = armClient.GetSubscriptions();
         SubscriptionResource subscription = subscriptions.Get(targetSubscriptionId);
         ResourceGroupCollection resourceGroups = subscription.GetResourceGroups();
@@ -80,12 +81,11 @@ public static class Program
         (
             new ArmDeploymentProperties(ArmDeploymentMode.Incremental)
             {
-                Template = BinaryData.FromObjectAsJson(templateJsonString),
+                Template = BinaryData.FromObjectAsJson(templateJson),
                 Parameters = BinaryData.FromObjectAsJson(new { name = containerGroupName })
             }
          );
         var rawResult = await deploymentCollection.CreateOrUpdateAsync(Azure.WaitUntil.Completed, deploymentName, deploymentContent);
-        var deploymentResult = rawResult.Value;
         var containerGroups = GetContainerGroups(armClient, targetSubscriptionId, targetResourceGroupName);
         var containerGroup = containerGroups.Get(containerGroupName).Value;
         var zones = containerGroup.Data.Zones.ToArray();
@@ -104,7 +104,7 @@ public static class Program
                     {
                         Command={},
                         Ports ={new ContainerPort(8000)},
-                        EnvironmentVariables = {},
+                        EnvironmentVariables={},
                         SecurityContext = new ContainerSecurityContextDefinition(){IsPrivileged = false}
                     }
                 },
