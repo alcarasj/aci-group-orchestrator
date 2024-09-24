@@ -11,7 +11,7 @@
         },
         "location": {
             "type": "string",
-            "defaultValue": "East US",
+            "defaultValue": "UAE North",
             "metadata": {
                 "description": "Location for all resources."
             }
@@ -61,6 +61,20 @@
             "defaultValue": 1,
             "metadata": {
                 "description": "The availability zone number for fault domain spread."
+            }
+        },
+        "targetSubnetResourceId": {
+            "type": "string",
+            "defaultValue": 1,
+            "metadata": {
+                "description": "The target subnet resource ID."
+            }
+        },
+        "targetSubnetName": {
+            "type": "string",
+            "defaultValue": 1,
+            "metadata": {
+                "description": "The target subnet name."
             }
         }
     },

@@ -1,5 +1,4 @@
 ﻿using Azure.Core;
-using Azure.ResourceManager.ContainerInstance.Models;
 using Azure.ResourceManager.ContainerInstance;
 using Azure.ResourceManager.Resources;
 using Azure.ResourceManager;
@@ -20,7 +19,8 @@ public static class Program
         var targetSubscriptionId = GetEnvVar("AZURE_SUBSCRIPTION_ID");
         var targetResourceGroupName = GetEnvVar("TARGET_RESOURCE_GROUP_NAME");
         var containerGroupName = GetEnvVar("CONTAINER_GROUP_NAME");
-        var targetSubnetResourceId = GetEnvVar("TARGET_SUBNET_RESOURCE_ID", true);
+        var targetSubnetResourceId = GetEnvVar("TARGET_SUBNET_RESOURCE_ID");
+        var targetSubnetName = GetEnvVar("TARGET_SUBNET_NAME");
         var templateFileName = GetEnvVar("TEMPLATE_FILE_NAME", true);
 
         var credentials = new ManagedIdentityCredential();
@@ -38,21 +38,8 @@ public static class Program
         for (var i = 0; i < N; i++)
         {
             var nthContainerGroupName = $"{containerGroupName}-{i}";
-            Task creationTask;
-            if (!string.IsNullOrEmpty(targetSubnetResourceId))
-            {
-                creationTask = CreateContainerGroup(armClient, targetSubscriptionId, targetResourceGroupName, nthContainerGroupName, targetSubnetResourceId);
-            }
-            else if (!string.IsNullOrEmpty(templateFileName))
-            {
-                var availabilityZoneNumber = (i % 3) + 1; // Assumes each AZ-supported region will have minimum 3 AZ's.
-                creationTask = CreateContainerGroup(armClient, targetSubscriptionId, targetResourceGroupName, nthContainerGroupName, templateFileName, $"deployment-{nthContainerGroupName}", availabilityZoneNumber);
-            }
-            else
-            {
-                creationTask = CreateContainerGroup(armClient, targetSubscriptionId, targetResourceGroupName, nthContainerGroupName);
-            }
-            creationTasks.Add(creationTask);
+            var availabilityZoneNumber = (i % 3) + 1; // Assumes each AZ-supported region will have minimum 3 AZ's.
+            Task creationTask = CreateContainerGroup(armClient, targetSubscriptionId, targetResourceGroupName, nthContainerGroupName, templateFileName, $"deployment-{nthContainerGroupName}", availabilityZoneNumber, targetSubnetResourceId, targetSubnetName);
         }
         await Task.WhenAll(creationTasks);
         stopWatch.Stop();
@@ -66,16 +53,18 @@ public static class Program
         Console.WriteLine("\nDone!");
     }
 
-    private static async Task CreateContainerGroup(ArmClient armClient, string targetSubscriptionId, string targetResourceGroupName, string containerGroupName, string templateFileName, string deploymentName, int availabilityZoneNumber)
+    private static async Task CreateContainerGroup(ArmClient armClient, string targetSubscriptionId, string targetResourceGroupName, string containerGroupName, string templateFileName, string deploymentName, int availabilityZoneNumber, string targetSubnetResourceId, string targetSubnetName)
     {
         Console.WriteLine($"\nCreating container group {containerGroupName} from ARM template {templateFileName}...");
         var stopWatch = Stopwatch.StartNew();
         var templateJsonString = File.ReadAllText(Path.Combine(".", "templates", templateFileName)).TrimEnd();
         var templateJson = JsonDocument.Parse(templateJsonString);
-        var parametersJson = new 
+        var parametersJson = new
         {
             name = new { value = containerGroupName },
-            availabilityZoneNumber = new { value = availabilityZoneNumber }
+            availabilityZoneNumber = new { value = availabilityZoneNumber },
+            targetSubnetResourceId = new { value = targetSubnetResourceId },
+            targetSubnetName = new { value = targetSubnetName }
         };
         SubscriptionCollection subscriptions = armClient.GetSubscriptions();
         SubscriptionResource subscription = subscriptions.Get(targetSubscriptionId);
@@ -96,68 +85,6 @@ public static class Program
         var zones = containerGroup.Data.Zones.ToArray();
         stopWatch.Stop();
         Console.WriteLine($"\nSuccessfully created container group {containerGroupName} from ARM template {templateFileName} (Zones: {string.Join(", ", zones)}) [{stopWatch.Elapsed.TotalMilliseconds}ms]");
-    }
-
-    private static async Task<string> CreateContainerGroup(ArmClient armClient, string targetSubscriptionId, string targetResourceGroupName, string containerGroupName)
-    {
-        Console.WriteLine($"\nCreating container group {containerGroupName}...");
-        var stopWatch = Stopwatch.StartNew();
-        var containerGroups = GetContainerGroups(armClient, targetSubscriptionId, targetResourceGroupName);
-        ContainerGroupData data = new ContainerGroupData(new AzureLocation("westeurope"), new ContainerInstanceContainer[]
-            {
-                    new ContainerInstanceContainer("accdemo", "mcr.microsoft.com/azuredocs/aci-helloworld", new ContainerResourceRequirements(new ContainerResourceRequestsContent(1.5, 1)))
-                    {
-                        Command={},
-                        Ports ={new ContainerPort(8000)},
-                        EnvironmentVariables={},
-                        SecurityContext = new ContainerSecurityContextDefinition(){IsPrivileged = false}
-                    }
-                },
-                ContainerInstanceOperatingSystemType.Linux)
-        {
-            ImageRegistryCredentials = { },
-            IPAddress = new ContainerGroupIPAddress(new ContainerGroupPort[] { new ContainerGroupPort(8000) { Protocol = ContainerGroupNetworkProtocol.Tcp } }, ContainerGroupIPAddressType.Public),
-            Sku = ContainerGroupSku.Confidential,
-            ConfidentialComputeCcePolicy = "eyJhbGxvd19hbGwiOiB0cnVlLCAiY29udGFpbmVycyI6IHsibGVuZ3RoIjogMCwgImVsZW1lbnRzIjogbnVsbH19",
-        };
-        ArmOperation<ContainerGroupResource> lro = await containerGroups.CreateOrUpdateAsync(WaitUntil.Completed, containerGroupName, data);
-        ContainerGroupResource result = lro.Value;
-        ContainerGroupData resourceData = result.Data;
-        stopWatch.Stop();
-        Console.WriteLine($"\nSuccessfully created container group {containerGroupName} (ID {resourceData.Id}) [{stopWatch.Elapsed.TotalMilliseconds}ms]");
-        return resourceData.Id;
-    }
-
-    private static async Task<string> CreateContainerGroup(ArmClient armClient, string targetSubscriptionId, string targetResourceGroupName, string containerGroupName, string targetSubnetResourceId)
-    {
-        Console.WriteLine($"\nCreating container group {containerGroupName} on subnet {targetSubnetResourceId}...");
-        var stopWatch = Stopwatch.StartNew();
-        var containerGroups = GetContainerGroups(armClient, targetSubscriptionId, targetResourceGroupName);
-        var subnetId = new ContainerGroupSubnetId(new ResourceIdentifier(targetSubnetResourceId));
-        ContainerGroupData data = new ContainerGroupData(new AzureLocation("eastus"), new ContainerInstanceContainer[]
-            {
-                    new ContainerInstanceContainer("accdemo", "mcr.microsoft.com/azuredocs/aci-helloworld", new ContainerResourceRequirements(new ContainerResourceRequestsContent(1.5, 1)))
-                    {
-                        Command={},
-                        Ports ={new ContainerPort(8000)},
-                        EnvironmentVariables = {},
-                        SecurityContext = new ContainerSecurityContextDefinition(){IsPrivileged = false}
-                    }
-                },
-                ContainerInstanceOperatingSystemType.Linux)
-        {
-            ImageRegistryCredentials = { },
-            IPAddress = new ContainerGroupIPAddress(new ContainerGroupPort[] { new ContainerGroupPort(8000) { Protocol = ContainerGroupNetworkProtocol.Tcp } }, ContainerGroupIPAddressType.Private),
-            Sku = ContainerGroupSku.Confidential,
-            ConfidentialComputeCcePolicy = "eyJhbGxvd19hbGwiOiB0cnVlLCAiY29udGFpbmVycyI6IHsibGVuZ3RoIjogMCwgImVsZW1lbnRzIjogbnVsbH19",
-            SubnetIds = { subnetId }
-        };
-        ArmOperation<ContainerGroupResource> lro = await containerGroups.CreateOrUpdateAsync(WaitUntil.Completed, containerGroupName, data);
-        ContainerGroupResource result = lro.Value;
-        ContainerGroupData resourceData = result.Data;
-        stopWatch.Stop();
-        Console.WriteLine($"\nSuccessfully created container group {containerGroupName} on subnet {targetSubnetResourceId} (ID {resourceData.Id}) [{stopWatch.Elapsed.TotalMilliseconds}ms]");
-        return resourceData.Id;
     }
 
     private static void DeleteContainerGroup(ArmClient armClient, string targetSubscriptionId, string targetResourceGroupName, string containerGroupName)
