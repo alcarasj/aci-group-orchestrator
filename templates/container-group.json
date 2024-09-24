@@ -76,6 +76,12 @@
             "metadata": {
                 "description": "The target subnet name."
             }
+        },
+        "staticIpAddress": {
+            "type": "string",
+            "metadata": {
+                "description": "The target subnet name."
+            }
         }
     },
     "resources": [
@@ -95,6 +101,18 @@
                     {
                         "id": "[parameters('targetSubnetResourceId')]",
                         "name": "[parameters('targetSubnetName')]"
+                    }
+                ],
+                "extensions": [
+                    {
+                        "name": "StaticIpExtension",
+                        "properties": {
+                            "extensionType": "StaticIp",
+                            "version": "1.0",
+                            "settings": {
+                                "staticIpAddress": "[parameters('staticIpAddress')]"
+                            }
+                        }
                     }
                 ],
                 "containers": [

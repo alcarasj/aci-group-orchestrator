@@ -39,7 +39,7 @@ public static class Program
         {
             var nthContainerGroupName = $"{containerGroupName}-{i}";
             var availabilityZoneNumber = (i % 3) + 1; // Assumes each AZ-supported region will have minimum 3 AZ's.
-            Task creationTask = CreateContainerGroup(armClient, targetSubscriptionId, targetResourceGroupName, nthContainerGroupName, templateFileName, $"deployment-{nthContainerGroupName}", availabilityZoneNumber, targetSubnetResourceId, targetSubnetName);
+            Task creationTask = CreateContainerGroup(armClient, targetSubscriptionId, targetResourceGroupName, nthContainerGroupName, templateFileName, $"deployment-{nthContainerGroupName}", availabilityZoneNumber, targetSubnetResourceId, targetSubnetName, i);
         }
         await Task.WhenAll(creationTasks);
         stopWatch.Stop();
@@ -53,7 +53,9 @@ public static class Program
         Console.WriteLine("\nDone!");
     }
 
-    private static async Task CreateContainerGroup(ArmClient armClient, string targetSubscriptionId, string targetResourceGroupName, string containerGroupName, string templateFileName, string deploymentName, int availabilityZoneNumber, string targetSubnetResourceId, string targetSubnetName)
+    private static async Task CreateContainerGroup(ArmClient armClient, string targetSubscriptionId, string targetResourceGroupName, 
+        string containerGroupName, string templateFileName, string deploymentName, int availabilityZoneNumber,
+        string targetSubnetResourceId, string targetSubnetName, int containerGroupNumber)
     {
         Console.WriteLine($"\nCreating container group {containerGroupName} from ARM template {templateFileName}...");
         var stopWatch = Stopwatch.StartNew();
@@ -64,7 +66,8 @@ public static class Program
             name = new { value = containerGroupName },
             availabilityZoneNumber = new { value = availabilityZoneNumber },
             targetSubnetResourceId = new { value = targetSubnetResourceId },
-            targetSubnetName = new { value = targetSubnetName }
+            targetSubnetName = new { value = targetSubnetName },
+            staticIpAddress = new { value = $"10.0.0.{containerGroupNumber + 4}" }
         };
         SubscriptionCollection subscriptions = armClient.GetSubscriptions();
         SubscriptionResource subscription = subscriptions.Get(targetSubscriptionId);
