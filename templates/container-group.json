@@ -91,6 +91,12 @@
                 "confidentialComputeProperties": {
                     "ccePolicy": "eyJhbGxvd19hbGwiOiB0cnVlLCAiY29udGFpbmVycyI6IHsibGVuZ3RoIjogMCwgImVsZW1lbnRzIjogbnVsbH19"
                 },
+                "subnetIds": [
+                    {
+                        "id": "[parameters('targetSubnetResourceId')]",
+                        "name": "[parameters('targetSubnetName')]"
+                    }
+                ],
                 "containers": [
                     {
                         "name": "[parameters('name')]",
