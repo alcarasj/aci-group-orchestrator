@@ -49,7 +49,7 @@ public static class Program
         // Wait for the registration of the newly-created resources to propagate through all ARM regions.
         SleepUntil(() => GetContainerGroups(armClient, targetSubscriptionId, targetResourceGroupName).Count() == N);
 
-        await DeleteAllContainerGroups(armClient, targetSubscriptionId, targetResourceGroupName);
+        // await DeleteAllContainerGroups(armClient, targetSubscriptionId, targetResourceGroupName);
         Console.WriteLine("\nDone!");
     }
 
@@ -174,7 +174,7 @@ public static class Program
 
         if (!isPredicateTrue && timesSlept >= MaxTimesToSleep)
         {
-            throw new Exception($"Expected predicate {(LambdaExpression)expression.Body} to be true after {MaxTimesToSleep} evaluations but was still false.");
+            throw new Exception($"Expected predicate {expression.Body} to be true after {MaxTimesToSleep} evaluations but was still false.");
         }
     }
 }

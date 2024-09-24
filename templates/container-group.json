@@ -121,10 +121,10 @@
                 "osType": "Linux",
                 "restartPolicy": "[parameters('restartPolicy')]",
                 "ipAddress": {
-                    "type": "Public",
+                    "type": "Private",
                     "ports": [
                         {
-                            "port": "[parameters('port')]",
+                            "port": "80",
                             "protocol": "TCP"
                         }
                     ]
