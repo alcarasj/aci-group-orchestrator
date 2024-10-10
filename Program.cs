@@ -11,7 +11,7 @@ using System.Text.Json;
 
 public static class Program
 {
-    private const int N = 10;
+    private const int N = 1;
     private const int MaxTimesToSleep = 10;
 
     private static async Task Main()
@@ -34,6 +34,7 @@ public static class Program
             var nthContainerGroupName = $"{containerGroupName}-{i}";
             var availabilityZoneNumber = (i % 3) + 1; // Assumes each AZ-supported region will have minimum 3 AZ's.
             Task creationTask = new Task(() => CreateContainerGroup(armClient, targetSubscriptionId, targetResourceGroupName, nthContainerGroupName, templateFileName, $"deployment-{nthContainerGroupName}", availabilityZoneNumber, targetSubnetResourceId, targetSubnetName, i));
+            creationTasks.Add(creationTask);
         }
         await Task.WhenAll(creationTasks);
         stopWatch.Stop();
