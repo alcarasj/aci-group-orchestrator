@@ -26,9 +26,6 @@ public static class Program
         var credentials = new ManagedIdentityCredential();
         var armClient = new ArmClient(credentials);
 
-        Console.WriteLine($"\nEnsuring that there are no existing container groups in the resource group...");
-        await DeleteAllContainerGroups(armClient, targetSubscriptionId, targetResourceGroupName);
-
         // Wait for the deletion of the resources to propagate through all ARM regions.
         SleepUntil(() => GetContainerGroups(armClient, targetSubscriptionId, targetResourceGroupName).Count() == 0);
 
@@ -39,7 +36,7 @@ public static class Program
         {
             var nthContainerGroupName = $"{containerGroupName}-{i}";
             var availabilityZoneNumber = (i % 3) + 1; // Assumes each AZ-supported region will have minimum 3 AZ's.
-            Task creationTask = CreateContainerGroup(armClient, targetSubscriptionId, targetResourceGroupName, nthContainerGroupName, templateFileName, $"deployment-{nthContainerGroupName}", availabilityZoneNumber, targetSubnetResourceId, targetSubnetName, i);
+            Task creationTask = new Task(() => CreateContainerGroup(armClient, targetSubscriptionId, targetResourceGroupName, nthContainerGroupName, templateFileName, $"deployment-{nthContainerGroupName}", availabilityZoneNumber, targetSubnetResourceId, targetSubnetName, i));
         }
         await Task.WhenAll(creationTasks);
         stopWatch.Stop();
@@ -53,7 +50,7 @@ public static class Program
         Console.WriteLine("\nDone!");
     }
 
-    private static async Task CreateContainerGroup(ArmClient armClient, string targetSubscriptionId, string targetResourceGroupName,
+    private static void CreateContainerGroup(ArmClient armClient, string targetSubscriptionId, string targetResourceGroupName,
         string containerGroupName, string templateFileName, string deploymentName, int availabilityZoneNumber,
         string targetSubnetResourceId, string targetSubnetName, int containerGroupNumber)
     {
@@ -82,7 +79,7 @@ public static class Program
                 Parameters = BinaryData.FromObjectAsJson(parametersJson)
             }
          );
-        await deploymentCollection.CreateOrUpdateAsync(WaitUntil.Completed, deploymentName, deploymentContent);
+        deploymentCollection.CreateOrUpdateAsync(WaitUntil.Completed, deploymentName, deploymentContent).GetAwaiter().GetResult();
         var containerGroups = GetContainerGroups(armClient, targetSubscriptionId, targetResourceGroupName);
         var containerGroup = containerGroups.Get(containerGroupName).Value;
         var zones = containerGroup.Data.Zones.ToArray();
