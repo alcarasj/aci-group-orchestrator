@@ -26,9 +26,6 @@ public static class Program
         var credentials = new ManagedIdentityCredential();
         var armClient = new ArmClient(credentials);
 
-        // Wait for the deletion of the resources to propagate through all ARM regions.
-        SleepUntil(() => GetContainerGroups(armClient, targetSubscriptionId, targetResourceGroupName).Count() == 0);
-
         Console.WriteLine($"\nParallel creation of {N} container groups starting...");
         var stopWatch = Stopwatch.StartNew();
         List<Task> creationTasks = new List<Task>();
