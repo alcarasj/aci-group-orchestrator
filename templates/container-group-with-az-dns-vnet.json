@@ -1,0 +1,153 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "name": {
+            "type": "string",
+            "defaultValue": "helloworld",
+            "metadata": {
+                "description": "Name for the container group"
+            }
+        },
+        "location": {
+            "type": "string",
+            "defaultValue": "UAE North",
+            "metadata": {
+                "description": "Location for all resources."
+            }
+        },
+        "image": {
+            "type": "string",
+            "defaultValue": "mcr.microsoft.com/aci/aci-confidential-helloworld:v1",
+            "metadata": {
+                "description": "Container image to deploy. Should be of the form repoName/imagename:tag for images stored in public Docker Hub, or a fully qualified URI for other registries. Images from private registries require additional registry credentials."
+            }
+        },
+        "port": {
+            "type": "int",
+            "defaultValue": 80,
+            "metadata": {
+                "description": "Port to open on the container and the public IP address."
+            }
+        },
+        "cpuCores": {
+            "type": "int",
+            "defaultValue": 1,
+            "metadata": {
+                "description": "The number of CPU cores to allocate to the container."
+            }
+        },
+        "memoryInGb": {
+            "type": "int",
+            "defaultValue": 1,
+            "metadata": {
+                "description": "The amount of memory to allocate to the container in gigabytes."
+            }
+        },
+        "restartPolicy": {
+            "type": "string",
+            "defaultValue": "Never",
+            "allowedValues": [
+                "Always",
+                "Never",
+                "OnFailure"
+            ],
+            "metadata": {
+                "description": "The behavior of Azure runtime if container has stopped."
+            }
+        },
+        "availabilityZoneNumber": {
+            "type": "int",
+            "defaultValue": 1,
+            "metadata": {
+                "description": "The availability zone number for fault domain spread."
+            }
+        },
+        "targetSubnetResourceId": {
+            "type": "string",
+            "metadata": {
+                "description": "The target subnet resource ID."
+            }
+        },
+        "targetSubnetName": {
+            "type": "string",
+            "metadata": {
+                "description": "The target subnet name."
+            }
+        }
+    },
+    "resources": [
+        {
+            "type": "Microsoft.ContainerInstance/containerGroups",
+            "apiVersion": "2023-05-01",
+            "name": "[parameters('name')]",
+            "location": "[parameters('location')]",
+            "zones": [
+                "[parameters('availabilityZoneNumber')]"
+            ],
+            "properties": {
+                "confidentialComputeProperties": {
+                    "ccePolicy": "eyJhbGxvd19hbGwiOiB0cnVlLCAiY29udGFpbmVycyI6IHsibGVuZ3RoIjogMCwgImVsZW1lbnRzIjogbnVsbH19"
+                },
+                "subnetIds": [
+                    {
+                        "id": "[parameters('targetSubnetResourceId')]",
+                        "name": "[parameters('targetSubnetName')]"
+                    }
+                ],
+                "initContainers": [
+                    {
+                        "name": "update-private-dns-record",
+                        "properties": {
+                            "image": "mcr.microsoft.com/azure-cli:latest",
+                            "environmentVariables": [],
+                            "command": [
+                                "/bin/sh",
+                                "-c",
+                                "az login --identity --username \"/subscriptions/e0f91dc0-102c-41ae-a3b3-d256a2ee118d/resourceGroups/jericos-stuff-rg/providers/Microsoft.ManagedIdentity/userAssignedIdentities/jericos-uami\"; az network private-dns record-set a create -n jericos-stuff -z jericos.stuff -g jericos-stuff"
+                            ]
+                        }
+                    }
+                ],
+                "containers": [
+                    {
+                        "name": "[parameters('name')]",
+                        "properties": {
+                            "image": "[parameters('image')]",
+                            "ports": [
+                                {
+                                    "port": "[parameters('port')]",
+                                    "protocol": "TCP"
+                                }
+                            ],
+                            "resources": {
+                                "requests": {
+                                    "cpu": "[parameters('cpuCores')]",
+                                    "memoryInGB": "[parameters('memoryInGb')]"
+                                }
+                            }
+                        }
+                    }
+                ],
+                "sku": "Confidential",
+                "osType": "Linux",
+                "restartPolicy": "[parameters('restartPolicy')]",
+                "ipAddress": {
+                    "type": "Private",
+                    "ports": [
+                        {
+                            "port": "80",
+                            "protocol": "TCP"
+                        }
+                    ]
+                }
+            }
+        }
+    ],
+    "outputs": {
+        "containerIPv4Address": {
+            "type": "string",
+            "value": "[reference(resourceId('Microsoft.ContainerInstance/containerGroups', parameters('name'))).ipAddress.ip]"
+        }
+    }
+}

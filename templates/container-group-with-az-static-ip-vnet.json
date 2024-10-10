@@ -65,14 +65,12 @@
         },
         "targetSubnetResourceId": {
             "type": "string",
-            "defaultValue": 1,
             "metadata": {
                 "description": "The target subnet resource ID."
             }
         },
         "targetSubnetName": {
             "type": "string",
-            "defaultValue": 1,
             "metadata": {
                 "description": "The target subnet name."
             }
@@ -80,7 +78,7 @@
         "staticIpAddress": {
             "type": "string",
             "metadata": {
-                "description": "The target subnet name."
+                "description": "The target static IP address assignment for the container group."
             }
         }
     },

@@ -53,7 +53,7 @@ public static class Program
         Console.WriteLine("\nDone!");
     }
 
-    private static async Task CreateContainerGroup(ArmClient armClient, string targetSubscriptionId, string targetResourceGroupName, 
+    private static async Task CreateContainerGroup(ArmClient armClient, string targetSubscriptionId, string targetResourceGroupName,
         string containerGroupName, string templateFileName, string deploymentName, int availabilityZoneNumber,
         string targetSubnetResourceId, string targetSubnetName, int containerGroupNumber)
     {
