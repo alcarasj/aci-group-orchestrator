@@ -106,7 +106,8 @@
                                 "-c",
                                 "az login --identity --username \"/subscriptions/e0f91dc0-102c-41ae-a3b3-d256a2ee118d/resourceGroups/jericos-stuff-rg/providers/Microsoft.ManagedIdentity/userAssignedIdentities/jericos-uami\"; az network private-dns record-set a create -n jericos-stuff -z jericos.stuff -g jericos-stuff"
                             ]
-                        }
+                        },
+                        "restartPolicy": "Never"
                     }
                 ],
                 "containers": [

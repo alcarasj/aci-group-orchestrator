@@ -61,9 +61,9 @@ public static class Program
             name = new { value = containerGroupName },
             availabilityZoneNumber = new { value = availabilityZoneNumber },
             targetSubnetResourceId = new { value = targetSubnetResourceId },
-            targetSubnetName = new { value = targetSubnetName },
-            staticIpAddress = new { value = $"10.0.0.{containerGroupNumber + 4}" }
+            targetSubnetName = new { value = targetSubnetName }
         };
+
         SubscriptionCollection subscriptions = armClient.GetSubscriptions();
         SubscriptionResource subscription = subscriptions.Get(targetSubscriptionId);
         ResourceGroupCollection resourceGroups = subscription.GetResourceGroups();
