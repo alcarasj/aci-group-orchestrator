@@ -11,25 +11,25 @@ using System.Text.Json;
 
 public static class Program
 {
-    private const int N = 1;
     private const int MaxTimesToSleep = 10;
 
     private static async Task Main()
     {
+        var amountToCreate = int.Parse(GetEnvVar("AMOUNT_TO_CREATE", true));
+        var templateFileName = GetEnvVar("TEMPLATE_FILE_NAME", true);
         var targetSubscriptionId = GetEnvVar("AZURE_SUBSCRIPTION_ID");
         var targetResourceGroupName = GetEnvVar("TARGET_RESOURCE_GROUP_NAME");
         var containerGroupName = GetEnvVar("CONTAINER_GROUP_NAME");
         var targetSubnetResourceId = GetEnvVar("TARGET_SUBNET_RESOURCE_ID");
         var targetSubnetName = GetEnvVar("TARGET_SUBNET_NAME");
-        var templateFileName = GetEnvVar("TEMPLATE_FILE_NAME", true);
 
         var credentials = new ManagedIdentityCredential();
         var armClient = new ArmClient(credentials);
 
-        Console.WriteLine($"\nParallel creation of {N} container groups starting...");
+        Console.WriteLine($"\nParallel creation of {amountToCreate} container groups starting...");
         var stopWatch = Stopwatch.StartNew();
         List<Task> creationTasks = new List<Task>();
-        for (var i = 0; i < N; i++)
+        for (var i = 0; i < amountToCreate; i++)
         {
             var nthContainerGroupName = $"{containerGroupName}-{i}";
             var availabilityZoneNumber = (i % 3) + 1; // Assumes each AZ-supported region will have minimum 3 AZ's.
@@ -39,10 +39,10 @@ public static class Program
         await Task.WhenAll(creationTasks);
         stopWatch.Stop();
 
-        Console.WriteLine($"\nParallel creation of {N} container groups succeeded! [{stopWatch.Elapsed.TotalMilliseconds}ms]");
+        Console.WriteLine($"\nParallel creation of {amountToCreate} container groups succeeded! [{stopWatch.Elapsed.TotalMilliseconds}ms]");
 
         // Wait for the registration of the newly-created resources to propagate through all ARM regions.
-        SleepUntil(() => GetContainerGroups(armClient, targetSubscriptionId, targetResourceGroupName).Count() == N);
+        SleepUntil(() => GetContainerGroups(armClient, targetSubscriptionId, targetResourceGroupName).Count() == amountToCreate);
 
         // await DeleteAllContainerGroups(armClient, targetSubscriptionId, targetResourceGroupName);
         Console.WriteLine("\nDone!");
