@@ -10,6 +10,8 @@
 
   <ItemGroup>
     <PackageReference Include="Microsoft.VisualStudio.Azure.Containers.Tools.Targets" Version="1.21.0" />
+	<PackageReference Include="Azure.Identity" Version="1.12.1" />
+	<PackageReference Include="Azure.ResourceManager.PrivateDns" Version="1.2.0" />
   </ItemGroup>
 
 </Project>

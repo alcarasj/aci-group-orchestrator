@@ -10,20 +10,19 @@ EXPOSE 443
 # This stage is used to build the service project
 FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
 ARG BUILD_CONFIGURATION=Release
-WORKDIR /src
-COPY ["DnsUpdater/DnsUpdater.csproj", "DnsUpdater/"]
-RUN dotnet restore "./DnsUpdater/DnsUpdater.csproj"
-COPY . .
-WORKDIR "/src/DnsUpdater"
-RUN dotnet build "./DnsUpdater.csproj" -c $BUILD_CONFIGURATION -o /app/build
+COPY . /src
+RUN dotnet restore "src/DnsUpdater.csproj"
+RUN dotnet build "src/DnsUpdater.csproj" -c $BUILD_CONFIGURATION -o /app/build
 
 # This stage is used to publish the service project to be copied to the final stage
 FROM build AS publish
 ARG BUILD_CONFIGURATION=Release
-RUN dotnet publish "./DnsUpdater.csproj" -c $BUILD_CONFIGURATION -o /app/publish /p:UseAppHost=false
+RUN dotnet publish "src/DnsUpdater.csproj" -c $BUILD_CONFIGURATION -o /app/publish /p:UseAppHost=false
+COPY run.sh /app/publish/run.sh
 
 # This stage is used in production or when running from VS in regular mode (Default when not using the Debug configuration)
 FROM base AS final
 WORKDIR /app
 COPY --from=publish /app/publish .
-ENTRYPOINT ["dotnet", "DnsUpdater.dll"]
+RUN chmod +x run.sh
+ENTRYPOINT ["/bin/sh", "run.sh"]
