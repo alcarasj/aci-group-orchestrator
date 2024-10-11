@@ -74,6 +74,13 @@
             "metadata": {
                 "description": "The target subnet name."
             }
+        },
+        "uamiResourceId": {
+            "type": "string",
+            "defaultValue": "/subscriptions/e0f91dc0-102c-41ae-a3b3-d256a2ee118d/resourceGroups/jericos-stuff-uaen/providers/Microsoft.ManagedIdentity/userAssignedIdentities/jericos-uami",
+            "metadata": {
+                "description": "The resource ID of the user-assigned managed identity."
+            }
         }
     },
     "resources": [
@@ -88,25 +95,17 @@
             "properties": {
                 "confidentialComputeProperties": {
                     "ccePolicy": "eyJhbGxvd19hbGwiOiB0cnVlLCAiY29udGFpbmVycyI6IHsibGVuZ3RoIjogMCwgImVsZW1lbnRzIjogbnVsbH19"
+                },        
+                "identity": {
+                    "type": "UserAssigned",
+                    "userAssignedIdentities": {
+                        "[parameters('uamiResourceId')]": {}
+                    }
                 },
                 "subnetIds": [
                     {
                         "id": "[parameters('targetSubnetResourceId')]",
                         "name": "[parameters('targetSubnetName')]"
-                    }
-                ],
-                "initContainers": [
-                    {
-                        "name": "update-private-dns-record",
-                        "properties": {
-                            "image": "mcr.microsoft.com/azure-cli:latest",
-                            "environmentVariables": [],
-                            "command": [
-                                "/bin/sh",
-                                "-c",
-                                "az login --identity --username \"/subscriptions/e0f91dc0-102c-41ae-a3b3-d256a2ee118d/resourceGroups/jericos-stuff-uaen/providers/Microsoft.ManagedIdentity/userAssignedIdentities/jericos-uami\"; az network private-dns record-set a create -n jericos-stuff -z jericos.stuff -g jericos-stuff"
-                            ]
-                        }
                     }
                 ],
                 "containers": [
