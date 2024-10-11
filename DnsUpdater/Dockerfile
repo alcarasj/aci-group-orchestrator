@@ -1,7 +1,8 @@
 # See https://aka.ms/customizecontainer to learn how to customize your debug container and how Visual Studio uses this Dockerfile to build your images for faster debugging.
 
 # This stage is used when running from VS in fast mode (Default for Debug configuration)
-FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS base
+FROM mcr.microsoft.com/azure-cli:2.62.0-cbl-mariner2.0 AS base
+RUN tdnf install -y aspnetcore-runtime-8.0
 WORKDIR /app
 EXPOSE 80
 EXPOSE 443
