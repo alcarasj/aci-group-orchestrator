@@ -128,6 +128,12 @@
                         }
                     }
                 ],
+                "imageRegistryCredentials": [
+                    {
+                        "server": "jericosacr.azurecr.io",
+                        "identity": "[parameters('uamiResourceId]"
+                    }
+                ],
                 "sku": "Confidential",
                 "osType": "Linux",
                 "restartPolicy": "[parameters('restartPolicy')]",
