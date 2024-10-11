@@ -131,7 +131,7 @@
                 "imageRegistryCredentials": [
                     {
                         "server": "jericosacr.azurecr.io",
-                        "identity": "[parameters('uamiResourceId]"
+                        "identity": "[parameters('uamiResourceId')]"
                     }
                 ],
                 "sku": "Confidential",
