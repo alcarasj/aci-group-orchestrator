@@ -1,0 +1,31 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.11.35327.3
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "AciGroupOrchestrator", "AciGroupOrchestrator\AciGroupOrchestrator.csproj", "{C6C6FBB9-FF13-4A36-9379-916F34F07D2A}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DnsUpdater", "DnsUpdater\DnsUpdater.csproj", "{883F7E9A-0870-46E3-B173-8D399F6E60F3}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{C6C6FBB9-FF13-4A36-9379-916F34F07D2A}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{C6C6FBB9-FF13-4A36-9379-916F34F07D2A}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{C6C6FBB9-FF13-4A36-9379-916F34F07D2A}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{C6C6FBB9-FF13-4A36-9379-916F34F07D2A}.Release|Any CPU.Build.0 = Release|Any CPU
+		{883F7E9A-0870-46E3-B173-8D399F6E60F3}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{883F7E9A-0870-46E3-B173-8D399F6E60F3}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{883F7E9A-0870-46E3-B173-8D399F6E60F3}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{883F7E9A-0870-46E3-B173-8D399F6E60F3}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {34A08BC9-959B-48B6-AE75-94874D51D064}
+	EndGlobalSection
+EndGlobal
