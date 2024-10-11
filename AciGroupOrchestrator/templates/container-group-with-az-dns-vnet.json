@@ -92,15 +92,15 @@
             "zones": [
                 "[parameters('availabilityZoneNumber')]"
             ],
+            "identity": {
+                "type": "UserAssigned",
+                "userAssignedIdentities": {
+                    "[parameters('uamiResourceId')]": {}
+                }
+            },
             "properties": {
                 "confidentialComputeProperties": {
                     "ccePolicy": "eyJhbGxvd19hbGwiOiB0cnVlLCAiY29udGFpbmVycyI6IHsibGVuZ3RoIjogMCwgImVsZW1lbnRzIjogbnVsbH19"
-                },
-                "identity": {
-                    "type": "UserAssigned",
-                    "userAssignedIdentities": {
-                        "[parameters('uamiResourceId')]": {}
-                    }
                 },
                 "subnetIds": [
                     {
