@@ -124,7 +124,17 @@
                                     "cpu": "[parameters('cpuCores')]",
                                     "memoryInGB": "[parameters('memoryInGb')]"
                                 }
-                            }
+                            },
+                            "environmentVariables": [
+                              {
+                                "name": "DNS_NAME",
+                                "value": "[parameters('name')]"
+                              },
+                              {
+                                "name": "UAMI_RESOURCE_ID",
+                                "value": "[parameters('uamiResourceId')]"
+                              }
+                            ]
                         }
                     }
                 ],

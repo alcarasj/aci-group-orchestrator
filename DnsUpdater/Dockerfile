@@ -24,6 +24,4 @@ RUN dotnet publish "src/DnsUpdater.csproj" -c $BUILD_CONFIGURATION -o /app/publi
 FROM base AS final
 WORKDIR /app
 COPY --from=publish /app/publish .
-COPY run.sh /usr/local/bin/run.sh
-RUN chmod +x /usr/local/bin/run.sh
-ENTRYPOINT ["/bin/sh", "/usr/local/bin/run.sh"]
+ENTRYPOINT ["dotnet", "DnsUpdater.dll"]
