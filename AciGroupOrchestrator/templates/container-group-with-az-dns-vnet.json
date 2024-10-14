@@ -132,16 +132,28 @@
                                     "memoryInGB": "[parameters('memoryInGb')]"
                                 }
                             },
-                            "environmentVariables": [
-                              {
-                                "name": "DOMAIN_NAME",
-                                "value": "[parameters('name')]"
-                              },
-                              {
-                                "name": "DNS_ZONE_NAME",
-                                "value": "[parameters('dnsZoneName')]"
-                              }
-                            ]
+                          "environmentVariables": [
+                            {
+                              "name": "DOMAIN_NAME",
+                              "value": "[parameters('name')]"
+                            },
+                            {
+                              "name": "DNS_ZONE_NAME",
+                              "value": "[parameters('dnsZoneName')]"
+                            },
+                            {
+                              "name": "UAMI_RESOURCE_ID",
+                              "value": "[parameters('uamiResourceId')]"
+                            },
+                            {
+                              "name": "RESOURCE_GROUP_NAME",
+                              "value": "[resourceGroup().name]"
+                            },
+                            {
+                              "name": "SUBSCRIPTION_ID",
+                              "value": "[subscription().subscriptionId]"
+                            }
+                          ]
                         }
                     }
                 ],
