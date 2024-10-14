@@ -71,30 +71,19 @@ public static class Program
 
         internal static void UpdateDnsRecord()
         {
-            var dnsRecordResourceId = PrivateDnsARecordResource.CreateResourceIdentifier(
+            var dnsZoneResourceId = PrivateDnsZoneResource.CreateResourceIdentifier(
                 "e0f91dc0-102c-41ae-a3b3-d256a2ee118d",
                 "jericos-stuff-uaen",
-                dnsZoneName,
-                domainName
+                dnsZoneName
             );
             var containerGroupIp = GetLocalIPAddress();
-
-            try
-            {
-
-                var dnsRecord = armClient.GetPrivateDnsARecordResource(dnsRecordResourceId).Get().Value;
-                var dnsRecordData = dnsRecord.Data;
-                var newIp = new PrivateDnsARecordInfo();
-                newIp.IPv4Address = containerGroupIp;
-                dnsRecordData.PrivateDnsARecords.Clear();
-                dnsRecordData.PrivateDnsARecords.Add(newIp);
-                dnsRecord.Update(dnsRecordData);
-            }
-            catch (RequestFailedException ex) when (ex.Status == (int)HttpStatusCode.NotFound)
-            {
-                Console.WriteLine($"Record {domainName} not found, creating...");
-                CreateDnsRecord(containerGroupIp);
-            }
+            var dnsZone = armClient.GetPrivateDnsZoneResource(dnsZoneResourceId);
+            var dnsRecords = dnsZone.GetPrivateDnsARecords();
+            var newIp = new PrivateDnsARecordInfo();
+            newIp.IPv4Address = containerGroupIp;
+            var newRecord = new PrivateDnsARecordData();
+            newRecord.PrivateDnsARecords.Add(newIp);
+            dnsRecords.CreateOrUpdate(WaitUntil.Completed, domainName, newRecord);
         }
 
         private static IPAddress GetLocalIPAddress()
@@ -108,32 +97,6 @@ public static class Program
                 }
             }
             throw new Exception("No network adapters with an IPv4 address in the system!");
-        }
-
-        private static void CreateDnsRecord(IPAddress ip) => ExecuteAzureCliCommand($"az network private-dns record-set a add-record -g jericos-stuff-uaen -z {dnsZoneName} -n {domainName} -a {ip}");
-
-        private static void ExecuteAzureCliCommand(string armCommand)
-        {
-            string command = $"az login --identity --username \"{uamiResourceId}\" && {armCommand}";
-            Process process = new Process();
-            process.StartInfo.FileName = "/bin/sh";
-            process.StartInfo.Arguments = $"-c \"{command}\"";
-            process.StartInfo.RedirectStandardOutput = true;
-            process.StartInfo.UseShellExecute = false;
-            process.StartInfo.CreateNoWindow = true;
-
-            try
-            {
-                process.Start();
-                string output = process.StandardOutput.ReadToEnd();
-                process.WaitForExit();
-                Console.WriteLine("Command Output:");
-                Console.WriteLine(output);
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"Error: {ex.Message}");
-            }
         }
     }
 }
