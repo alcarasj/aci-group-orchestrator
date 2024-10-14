@@ -1,12 +1,18 @@
+using Azure;
+using Azure.Core;
+using Azure.Identity;
+using Azure.ResourceManager;
 using Azure.ResourceManager.PrivateDns;
-using System.Diagnostics;
+using Azure.ResourceManager.PrivateDns.Models;
+using System.Net;
+using System.Net.Sockets;
 
 public static class Program
 {
     private static void Main()
     {
         Console.WriteLine("Start!");
-        DnsUpdater.RenewDnsRecord();
+        DnsUpdater.UpdateDnsRecord();
 
         var builder = WebApplication.CreateBuilder();
         var app = builder.Build();
@@ -18,65 +24,70 @@ public static class Program
 
     private static class DnsUpdater
     {
-        private static readonly string dnsName;
+        private static readonly string domainName;
 
-        private static readonly string uamiResourceId;
+        private static readonly ArmClient armClient;
 
         static DnsUpdater()
         {
-            var dnsNameValue = Environment.GetEnvironmentVariable("DNS_NAME");
-            if (string.IsNullOrEmpty(dnsNameValue))
+            var domainNameValue = Environment.GetEnvironmentVariable("DOMAIN_NAME");
+            if (string.IsNullOrEmpty(domainNameValue))
             {
-                throw new ArgumentNullException("DNS_NAME cannot be null or empty.");
+                throw new ArgumentNullException("DOMAIN_NAME cannot be null or empty.");
             }
-            var uamiResourceIdValue = Environment.GetEnvironmentVariable("UAMI_RESOURCE_ID");
-            if (string.IsNullOrEmpty(uamiResourceIdValue))
+            domainName = domainNameValue;
+
+            TokenCredential credentials;
+            var isVsDebugMode = Environment.GetEnvironmentVariable("VS_DEBUG_MODE");
+            if (isVsDebugMode == "true")
             {
-                throw new ArgumentNullException("UAMI_RESOURCE_ID cannot be null or empty.");
+                var options = new InteractiveBrowserCredentialOptions() { TenantId = "e272c4af-9772-49f8-b060-a283d2a31cdf" };
+                credentials = new InteractiveBrowserCredential(options);
             }
-
-            dnsName = dnsNameValue;
-            uamiResourceId = uamiResourceIdValue;
+            else
+            {
+                credentials = new ManagedIdentityCredential();
+            }
+            armClient = new ArmClient(credentials);
         }
 
-        internal static void RenewDnsRecord()
+        internal static void UpdateDnsRecord()
         {
-            CreateDnsRecord();
-        }
-
-        private static void CreateDnsRecord()
-        {
-            ExecuteAzureCliCommand("az network private-dns record-set a add-record -g jericos-stuff-uaen -z jericos.stuff -n some-record-set -a \"1.2.3.4\"");
-        }
-
-        private static void ExecuteAzureCliCommand(string armCommand)
-        {
-            // Command to run
-            string command = $"az login --identity --username \"{uamiResourceId}\" && {armCommand}";       // Create a new process
-            Process process = new Process();
-            process.StartInfo.FileName = "/bin/sh"; // Use bash to run the command
-            process.StartInfo.Arguments = $"-c \"{command}\""; // Pass the command as an argument
-            process.StartInfo.RedirectStandardOutput = true; // Redirect output
-            process.StartInfo.UseShellExecute = false; // Don't use shell execute
-            process.StartInfo.CreateNoWindow = true; // Don't create a window
-
+            var dnsRecordResourceId = PrivateDnsARecordResource.CreateResourceIdentifier(
+                "e0f91dc0-102c-41ae-a3b3-d256a2ee118d",
+                "jericos-stuff-uaen",
+                "jericos.stuff",
+                domainName
+            );
             try
             {
-                // Start the process
-                process.Start();
-
-                // Read the output
-                string output = process.StandardOutput.ReadToEnd();
-                process.WaitForExit(); // Wait for the process to exit
-
-                // Print the output
-                Console.WriteLine("Command Output:");
-                Console.WriteLine(output);
+                var dnsRecord = armClient.GetPrivateDnsARecordResource(dnsRecordResourceId).Get().Value;
+                var dnsRecordData = dnsRecord.Data;
+                var newIp = new PrivateDnsARecordInfo();
+                newIp.IPv4Address = GetLocalIPAddress();
+                dnsRecordData.PrivateDnsARecords.Clear();
+                dnsRecordData.PrivateDnsARecords.Add(newIp);
+                dnsRecord.Update(dnsRecordData);
             }
-            catch (Exception ex)
+            catch (RequestFailedException ex) when (ex.Status == (int)HttpStatusCode.NotFound)
             {
-                Console.WriteLine($"Error: {ex.Message}");
+                Console.WriteLine($"Record {domainName} not found.");
+                throw;
             }
+        }
+
+        private static IPAddress GetLocalIPAddress()
+        {
+            var host = Dns.GetHostEntry(Dns.GetHostName());
+            foreach (var ip in host.AddressList)
+            {
+                if (ip.AddressFamily == AddressFamily.InterNetwork)
+                {
+                    return ip;
+                }
+            }
+            throw new Exception("No network adapters with an IPv4 address in the system!");
+
         }
     }
 }

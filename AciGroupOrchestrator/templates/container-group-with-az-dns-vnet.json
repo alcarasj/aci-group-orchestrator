@@ -46,7 +46,7 @@
         },
         "restartPolicy": {
             "type": "string",
-            "defaultValue": "Never",
+            "defaultValue": "OnFailure",
             "allowedValues": [
                 "Always",
                 "Never",
@@ -80,6 +80,13 @@
             "defaultValue": "/subscriptions/e0f91dc0-102c-41ae-a3b3-d256a2ee118d/resourceGroups/jericos-stuff-uaen/providers/Microsoft.ManagedIdentity/userAssignedIdentities/jericos-uami",
             "metadata": {
                 "description": "The resource ID of the user-assigned managed identity."
+            }
+        },
+        "dnsZoneName": {
+            "type": "string",
+            "defaultValue": "jericos.stuff",
+            "metadata": {
+                "description": "The name of the private DNS zone."
             }
         }
     },
@@ -127,12 +134,12 @@
                             },
                             "environmentVariables": [
                               {
-                                "name": "DNS_NAME",
+                                "name": "DOMAIN_NAME",
                                 "value": "[parameters('name')]"
                               },
                               {
-                                "name": "UAMI_RESOURCE_ID",
-                                "value": "[parameters('uamiResourceId')]"
+                                "name": "DNS_ZONE_NAME",
+                                "value": "[parameters('dnsZoneName')]"
                               }
                             ]
                         }
