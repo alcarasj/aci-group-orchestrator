@@ -2,6 +2,13 @@
 
 # This stage is used when running from VS in fast mode (Default for Debug configuration)
 FROM  mcr.microsoft.com/dotnet/aspnet:8.0.10-jammy-amd64 AS base
+RUN apt update
+RUN apt upgrade -y
+RUN apt install curl gnupg apt-transport-https lsb-release -y
+RUN curl -SLs https://packages.microsoft.com/keys/microsoft.asc | apt-key add -
+RUN echo "deb [arch=amd64] https://packages.microsoft.com/repos/azure-cli/ $(lsb_release -cs) main" > /etc/apt/sources.list.d/azure-cli.list
+RUN apt update
+RUN apt install azure-cli -y
 WORKDIR /app
 EXPOSE 80
 EXPOSE 443
