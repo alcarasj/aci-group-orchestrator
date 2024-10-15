@@ -29,8 +29,6 @@ public static class Program
 
         private static readonly string dnsZoneName;
 
-        private static readonly string uamiResourceId;
-
         private static readonly ArmClient armClient;
 
         static DnsUpdater()
@@ -40,18 +38,12 @@ public static class Program
             {
                 throw new ArgumentNullException("DOMAIN_NAME cannot be null or empty.");
             }
-            var uamiResourceIdValue = Environment.GetEnvironmentVariable("UAMI_RESOURCE_ID");
-            if (string.IsNullOrEmpty(uamiResourceIdValue))
-            {
-                throw new ArgumentNullException("UAMI_RESOURCE_ID cannot be null or empty.");
-            }
             var dnsZoneNameValue = Environment.GetEnvironmentVariable("DNS_ZONE_NAME");
             if (string.IsNullOrEmpty(dnsZoneNameValue))
             {
                 throw new ArgumentNullException("DNS_ZONE_NAME cannot be null or empty.");
             }
 
-            uamiResourceId = uamiResourceIdValue;
             domainName = domainNameValue;
             dnsZoneName = dnsZoneNameValue;
 
@@ -82,6 +74,7 @@ public static class Program
             var newIp = new PrivateDnsARecordInfo();
             newIp.IPv4Address = containerGroupIp;
             var newRecord = new PrivateDnsARecordData();
+            newRecord.TtlInSeconds = 3600;
             newRecord.PrivateDnsARecords.Add(newIp);
             dnsRecords.CreateOrUpdate(WaitUntil.Completed, domainName, newRecord);
         }
