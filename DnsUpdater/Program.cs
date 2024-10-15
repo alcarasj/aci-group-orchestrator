@@ -2,11 +2,10 @@ using Azure;
 using Azure.Core;
 using Azure.Identity;
 using Azure.ResourceManager;
+using Azure.ResourceManager.ContainerInstance;
 using Azure.ResourceManager.PrivateDns;
 using Azure.ResourceManager.PrivateDns.Models;
-using System.Diagnostics;
 using System.Net;
-using System.Net.Sockets;
 
 public static class Program
 {
@@ -68,28 +67,48 @@ public static class Program
                 "jericos-stuff-uaen",
                 dnsZoneName
             );
-            var containerGroupIp = GetLocalIPAddress();
-            var dnsZone = armClient.GetPrivateDnsZoneResource(dnsZoneResourceId);
-            var dnsRecords = dnsZone.GetPrivateDnsARecords();
-            var newIp = new PrivateDnsARecordInfo();
-            newIp.IPv4Address = containerGroupIp;
-            var newRecord = new PrivateDnsARecordData();
-            newRecord.TtlInSeconds = 3600;
-            newRecord.PrivateDnsARecords.Add(newIp);
-            dnsRecords.CreateOrUpdate(WaitUntil.Completed, domainName, newRecord);
+            try
+            {
+                var containerGroupIp = PollForContainerGroupIpAddress();
+                var dnsZone = armClient.GetPrivateDnsZoneResource(dnsZoneResourceId);
+                var dnsRecords = dnsZone.GetPrivateDnsARecords();
+                var newIp = new PrivateDnsARecordInfo();
+                newIp.IPv4Address = containerGroupIp;
+                var newRecord = new PrivateDnsARecordData();
+                newRecord.TtlInSeconds = 3600;
+                newRecord.PrivateDnsARecords.Add(newIp);
+                dnsRecords.CreateOrUpdate(WaitUntil.Completed, domainName, newRecord);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine(ex.ToString());
+            }
         }
 
-        private static IPAddress GetLocalIPAddress()
+        private static IPAddress PollForContainerGroupIpAddress()
         {
-            var host = Dns.GetHostEntry(Dns.GetHostName());
-            foreach (var ip in host.AddressList)
+            var containerGroupResourceId = ContainerGroupResource.CreateResourceIdentifier(
+                "e0f91dc0-102c-41ae-a3b3-d256a2ee118d",
+                "jericos-stuff-uaen",
+                domainName
+            );
+            var timesPolled = 0;
+            var maxTimesToPoll = 3;
+            var pollIntervalSeconds = 3;
+            while (timesPolled < maxTimesToPoll)
             {
-                if (ip.AddressFamily == AddressFamily.InterNetwork)
+                var containerGroup = armClient.GetContainerGroupResource(containerGroupResourceId).Get().Value;
+                var ip = containerGroup.Data?.IPAddress?.IP;
+                Console.WriteLine($"{containerGroupResourceId}: {ip}");
+                if (ip != null && ip.ToString() != "0.0.0.0")
                 {
                     return ip;
                 }
+                Thread.Sleep(pollIntervalSeconds * 1000);
+                timesPolled++;
             }
-            throw new Exception("No network adapters with an IPv4 address in the system!");
+
+            throw new Exception("Failed to poll for a valid container group address.");
         }
     }
 }
