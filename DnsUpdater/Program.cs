@@ -2,10 +2,10 @@ using Azure;
 using Azure.Core;
 using Azure.Identity;
 using Azure.ResourceManager;
-using Azure.ResourceManager.ContainerInstance;
 using Azure.ResourceManager.PrivateDns;
 using Azure.ResourceManager.PrivateDns.Models;
 using System.Net;
+using System.Net.Sockets;
 
 public static class Program
 {
@@ -24,6 +24,8 @@ public static class Program
 
     private static class DnsUpdater
     {
+        private const string ContainerGroupSubnetIpPrefix = "10.0.1.";
+
         private static readonly string domainName;
 
         private static readonly string dnsZoneName;
@@ -69,7 +71,7 @@ public static class Program
             );
             try
             {
-                var containerGroupIp = PollForContainerGroupIpAddress();
+                var containerGroupIp = GetContainerGroupIpAddress();
                 var dnsZone = armClient.GetPrivateDnsZoneResource(dnsZoneResourceId);
                 var dnsRecords = dnsZone.GetPrivateDnsARecords();
                 var newIp = new PrivateDnsARecordInfo();
@@ -85,30 +87,19 @@ public static class Program
             }
         }
 
-        private static IPAddress PollForContainerGroupIpAddress()
+        private static IPAddress GetContainerGroupIpAddress()
         {
-            var containerGroupResourceId = ContainerGroupResource.CreateResourceIdentifier(
-                "e0f91dc0-102c-41ae-a3b3-d256a2ee118d",
-                "jericos-stuff-uaen",
-                domainName
-            );
-            var timesPolled = 0;
-            var maxTimesToPoll = 3;
-            var pollIntervalSeconds = 3;
-            while (timesPolled < maxTimesToPoll)
+            var host = Dns.GetHostEntry(Dns.GetHostName());
+            foreach (var ip in host.AddressList)
             {
-                var containerGroup = armClient.GetContainerGroupResource(containerGroupResourceId).Get().Value;
-                var ip = containerGroup.Data?.IPAddress?.IP;
-                Console.WriteLine($"{containerGroupResourceId}: {ip}");
-                if (ip != null && ip.ToString() != "0.0.0.0")
+                
+                if (ip.ToString().StartsWith(ContainerGroupSubnetIpPrefix))
                 {
+                    Console.WriteLine($"IP found: {ip}");
                     return ip;
                 }
-                Thread.Sleep(pollIntervalSeconds * 1000);
-                timesPolled++;
             }
-
-            throw new Exception("Failed to poll for a valid container group address.");
+            throw new Exception($"No network adapters with prefix {ContainerGroupSubnetIpPrefix} in the system!");
         }
     }
 }
